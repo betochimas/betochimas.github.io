@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 {/* All components exclusive to PoliViz page
-import USMap from "../data/USMap.jsx";
-import USAMapSelect from '../data/USAMapSelect.tsx';*/}
+import USMap from "../data/USMap.jsx";*/}
+import USMapImported from '../components/USMapImported.tsx';
+import USMapBasic from '../components/USMapBasic.tsx';
+import PolvizIntro from '../components/PolivizIntro.jsx';
 
 function PoliViz() {
     const [count, setCount] = useState(0)
@@ -9,7 +11,9 @@ function PoliViz() {
     return (
       <>
         <div className="bg-slate-100 dark:bg-stone-800 text-stone-900 dark:text-stone-300 font-inter">
-          US Map component WIP.
+          <PolvizIntro />
+          {/*<USMapImported />*/}
+          <USMapBasic />
         </div>
         <div className="bg-slate-100 dark:bg-stone-800 text-stone-900 dark:text-stone-300 min-h-screen font-inter">
           <div className="bg-slate-100 dark:bg-stone-800 max-w-5xl w-12/12 mx-auto">

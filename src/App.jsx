@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
-import PoliViz from './pages/PoliViz';
+import PoliViz from './pages/PoliViz.tsx';
 import Page2 from './pages/Page2';
 import Page3 from './pages/Page3';
 import Page404 from './pages/Page404';
