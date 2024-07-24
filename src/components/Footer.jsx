@@ -2,10 +2,10 @@ import React from 'react';
 
 function Footer() {
     return (
-        <div className="py-5 text-center">
+        <div className="py-5 text-center dark:bg-stone-800 dark:text-white">
             {/* Social Icons */}
             <p className="text-sm mt-2 opacity-50">
-                &copy; {new Date().getFullYear()} FirstName LastName. All rights reserved.
+                &copy; {new Date().getFullYear()} Dylan Chima-Sanchez. All rights reserved.
             </p>
         </div>
     )

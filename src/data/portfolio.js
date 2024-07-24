@@ -1,20 +1,20 @@
 export default [
     {
-        title: 'Project 1',
+        title: 'ASR Model for Dysarthric Speech',
         imgUrl: '/assets/react.svg',
-        stack: ['HTML', 'CSS', 'JavaScript'],
-        link: 'https://github.com',
+        stack: ['Python', 'PyTorch', 'XLSR'],
+        //link: ,
     },
     {
-        title: 'Project 2',
-        imgUrl: '/assets/react.svg',
+        title: 'Website',
+        imgUrl: '/assets/website.png',
         stack: ['React', 'Tailwind', 'Vite'],
-        link: 'https://github.com',
+        link: 'https://github.com/betochimas',
     },
     {
-        title: 'Project 3',
+        title: 'Toy LLM Project (WIP)',
         imgUrl: '/assets/react.svg',
-        stack: ['Python', 'C++', 'Robotics'],
-        link: 'https://github.com',
+        stack: ['PyTorch', 'HuggingFace'],
+        link: 'https://github.com/betochimas',
     }
 ]

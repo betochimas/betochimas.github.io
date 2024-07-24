@@ -4,19 +4,28 @@ import PolivizButton from './PolivizButton.tsx';
 import PolivizModeButtonGroup from './PolivizModeButtonGroup.tsx';
 import PolivizYearButtonGroup from './PolivizYearButtonGroup.tsx';
 
-function PolvizIntro() {
+interface PoliVizProps {
+    currentMode: string;
+    currentYear: string;
+    handleModeChange: React.Dispatch<React.SetStateAction<string>>;
+    handleYearChange: React.Dispatch<React.SetStateAction<string>>;
+}
+
+// function PolvizIntro() {
+//const PolvizIntro = ({handleModeChange, handleYearChange}: PoliVizProps) => {
+const PolvizIntro: React.FC<PoliVizProps> = ({currentMode, currentYear, handleModeChange, handleYearChange}) => {
     const [count, setCount] = useState(0);
     // State to hold the label passed from the PolivizMode and Year components
-    const [currentMode, setMode] = useState<string>('Results');
-    const [currentYear, setYear] = useState<string>('2024');
+    //const [currentMode, setMode] = useState<string>('Results');
+    //const [currentYear, setYear] = useState<string>('2024');
 
-    const handleModeChange = (newMode : string) => {
-        setMode(newMode);
-    }
+    //const handleModeChange = (newMode : string) => {
+    //    setMode(newMode);
+    //}
 
-    const handleYearChange = (newYear : string) => {
-        setYear(newYear);
-    }
+    //const handleYearChange = (newYear : string) => {
+    //    setYear(newYear);
+    //}
 
     return (
         <div className="h-60 bg-stone-300 dark:bg-stone-700 justify-center text-center">

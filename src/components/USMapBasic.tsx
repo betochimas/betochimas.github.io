@@ -2,37 +2,44 @@ import React, { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
 
+interface USMapBasicProps {
+   currentMode: string;
+   currentYear: string;
+}
+
 type TextPosition = {
  x: string;
  y: string;
 } | "center"
 
-export const USMapBasic = () => {
- const [usaState, setUsaState] = useState<string | null>(null);
- const onHoverUSAStateColor = "slate";
- const onHoverUSAStateStrokeColor = "slate";
+// export const USMapBasic = () => {
+export const USMapBasic = ({ currentMode, currentYear }: USMapBasicProps) => {
+   
+  const [usaState, setUsaState] = useState<string | null>(null);
+  const onHoverUSAStateColor = "slate";
+  const onHoverUSAStateStrokeColor = "slate";
 
- const handleClick = function (): void {
-    // does nothing at the moment
- };
+  const handleClick = function (): void {
+     // does nothing at the moment
+   };
 
- const handleMouseEnter = function (): void {
-    // does nothing at the moment
- };
+   const handleMouseEnter = function (): void {
+   // does nothing at the moment
+   };
 
- const handleMouseLeave = function (): void {
-    // does nothing at the moment
- };
+   const handleMouseLeave = function (): void {
+      // does nothing at the moment
+   };
  
- return (
-  <svg
-   xmlns="http://www.w3.org/2000/svg"
-   width="959"
-   height="593"
-   viewBox="0 0 959 593"
-   fill={"#999999"}
-   className={twMerge("w-full h-full", "")}
-  >
+   return (
+   <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="959"
+      height="593"
+      viewBox="0 0 959 593"
+      fill={"#999999"}
+      className={twMerge("w-full h-full", "")}
+   >
    <g>
     <path
      name="Alaska"
