@@ -5,7 +5,14 @@ import tailwindcss from 'tailwindcss'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: 'https://betochimas.github.io/',
+  build: {
+    outDir: 'dist',
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    }
+  },
   css: {
     postcss: {
       plugins: [tailwindcss()],
