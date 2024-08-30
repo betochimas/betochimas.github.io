@@ -4,7 +4,7 @@ export default [
         title: "Master's Student, UC Davis",
         duration: '2.5 yrs',
         details: 
-            'Major of study in Computer Science. Did internship at tech company, and was teaching assistant for various quarters.'
+            'Majored in Computer Science. Did 2 internships at NVIDIA, and was a teaching assistant for a variety of different courses.'
     },
     {
         year: '2022-2023',

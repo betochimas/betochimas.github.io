@@ -18,9 +18,9 @@ function Navigation() {
         <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md">
           <a href="https://github.com/betochimas/">{github}</a>
         </div>
-        <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md">
+        {/*<div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md">
           <a href="https://www.google.com">{insta}</a>
-        </div>
+        </div>*/}
         <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md">
           <a href="mailto:da-chimasanchez@berkeley.edu">{mail}</a>
         </div>

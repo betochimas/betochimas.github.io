@@ -19,7 +19,8 @@ const PolivizYearButtonGroup: React.FC<PolivizYearButtonGroupProps> = ({ onYearC
     }
 
     return (
-        <div className="relative top-10 h-30 md:h-20 lg:h-18 bg-slate-300 dark:bg-slate-800 w-2/3 mx-auto items-center justify-center">
+        //<div className="relative top-10 h-30 md:h-20 lg:h-18 bg-slate-300 dark:bg-slate-800 w-2/3 mx-auto items-center justify-center">
+        <div className="relative top-5 h-30 md:h-20 lg:h-18 w-2/3 mx-auto items-center justify-center">
             <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-1 text-center">
                 {/* bg-zinc-300 dark:bg-zinc-800
                 */}   

@@ -8,7 +8,7 @@ interface PolivizModeButtonGroupProps {
     mode?: string;
   }
 
-const Mode = ["Results", "Margin", "Swing", "Trend", "Senate"];
+const Mode = ["Results", "Margin", "Adjusted", "Swing", "Trend"];
 
 const PolivizModeButtonGroup: React.FC<PolivizModeButtonGroupProps> = ({ children, onModeChange }) => {
     const [activeModeButton, setActiveButton] = useState<number | null>(null);
@@ -19,7 +19,8 @@ const PolivizModeButtonGroup: React.FC<PolivizModeButtonGroupProps> = ({ childre
     }
 
     return (
-        <div className="relative top-10 h-20 md:h-10 lg:h-10 bg-zinc-300 dark:bg-zinc-800 w-2/3 mx-auto items-center justify-center">
+        //<div className="relative top-10 h-20 md:h-10 lg:h-10 bg-zinc-300 dark:bg-zinc-800 w-2/3 mx-auto items-center justify-center">
+        <div className="relative top-5 h-20 md:h-10 lg:h-10 w-2/3 mx-auto items-center justify-center">
             <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-1 text-center">
                 {/* bg-zinc-300 dark:bg-zinc-800
                 */}   

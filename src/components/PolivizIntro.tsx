@@ -28,11 +28,22 @@ const PolvizIntro: React.FC<PoliVizProps> = ({currentMode, currentYear, handleMo
     //}
 
     return (
-        <div className="h-60 bg-stone-300 dark:bg-stone-700 justify-center text-center">
-            This page shows detailed results of recent US presidential elections, starting from 1992 to 2024. First, you can select the mode of map to display. The options are "Results", "Margin", "Swing", "Trend", and "Senate".
-            <div>
-            Current Mode: {currentMode},
-            Election Year: {currentYear}
+        //<div className="h-60 bg-stone-300 dark:bg-stone-700 justify-center text-center">
+        <div className="h-60 pt-2 justify-center text-center">
+            {/*This page shows detailed results of recent US presidential elections, starting from 1992 to 2024. First, you can select the mode of map to display. The options are "Results", "Margin", "Adjusted", "Swing", and "Trend".*/}
+            This is an interactive map of the U.S., displaying election results and trends from 1992 to 2024.
+            <div className="pt-2 text-left pl-20">
+                <ul>
+                    <li>Results: States shaded by which political party wins that state.</li>
+                    <li>Margin: Like "Results", but darker and lighter shades mean larger and smaller margins of victory, respectively.</li>
+                    <li>Adjusted: Like "Margin", but shades are adjusted according to the national popular vote margin.</li>
+                    <li>Swing: Shows the difference in margin across consecutive elections. </li>
+                    <li>Trend: Shows the difference in adjusted margin across consecutive elections.</li>
+                </ul>
+            </div>
+            <div className="pt-2">
+                Current Mode: <b>{currentMode}</b>,
+                Election Year: <b>{currentYear}</b>
             </div>
             <PolivizModeButtonGroup onModeChange={handleModeChange} />
             {/*<div className="relative top-10 h-20 md:h-10 lg:h-10 w-2/3 bg-zinc-300 dark:bg-zinc-800 mx-auto items-center justify-center">
