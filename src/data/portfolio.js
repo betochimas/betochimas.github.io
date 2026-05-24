@@ -16,5 +16,11 @@ export default [
         imgUrl: '/assets/react.svg',
         stack: ['PyTorch', 'HuggingFace'],
         link: 'https://github.com/betochimas',
+    },
+    {
+        title: 'Historical Conflicts API',
+        imgUrl: '/assets/react.svg',
+        stack: ['Java', 'Spring Boot', 'PostgreSQL'],
+        link: 'https://github.com/betochimas/historical-conflicts-api',
     }
 ]

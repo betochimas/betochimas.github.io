@@ -11,6 +11,7 @@ function Navigation() {
       <div className="h-8 flex justify-end relative top-5 right-1/4">
         <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md"><Link to="/">Home</Link></div>
         <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md"><Link to="/poliviz">Visualizations</Link></div>
+        <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md"><Link to="/conflicts">Conflicts API</Link></div>
         {/*<div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md"><Link to="/page2">Page{' '}2</Link></div>
         <div className="border-stone-900 dark:border-white inline-block px-1 py-0.5 border-2 rounded-md"><Link to="/page3">Page{' '}3</Link></div>*/}
       </div>
