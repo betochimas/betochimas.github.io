@@ -60,13 +60,13 @@ module.exports = {
       */
       colors: {
         // Semantic palette for the redesign (see docs/redesign-plan.md §1, Step 0)
-        accent: '#5B4FCF',
-        'accent-hover': '#4A3FB0',
+        accent: '#1E3F7A',
+        'accent-hover': '#152C54',
         surface: '#F7F7F5',
-        'surface-dark': '#0E0E0E',
+        'surface-dark': '#070C14',
         ink: '#111111',
         'ink-dark': '#F0F0EE',
-        muted: '#E4E4E7',
+        muted: '#DDE4EF',
         //
         'results-blue': '#60a5fa',
         'results-red': '#f87171',
