@@ -59,6 +59,15 @@ module.exports = {
         margin-inf-red = red-800 = #991b1b
       */
       colors: {
+        // Semantic palette for the redesign (see docs/redesign-plan.md §1, Step 0)
+        accent: '#5B4FCF',
+        'accent-hover': '#4A3FB0',
+        surface: '#F7F7F5',
+        'surface-dark': '#0E0E0E',
+        ink: '#111111',
+        'ink-dark': '#F0F0EE',
+        muted: '#E4E4E7',
+        //
         'results-blue': '#60a5fa',
         'results-red': '#f87171',
         'results-unknown': '#94a3b8',
