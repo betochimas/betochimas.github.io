@@ -1,17 +1,15 @@
 import Intro from '../components/Intro'
-import Portfolio from '../components/Portfolio'
-import Timeline from '../components/Timeline'
-import Contact from '../components/Contact'
+import SelectedWork from '../components/SelectedWork'
+import Interests from '../components/Interests'
 import Footer from '../components/Footer'
 
 function Home() {
   return (
     <div className="bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark min-h-screen font-inter">
-      <div className="bg-surface dark:bg-surface-dark max-w-5xl w-full mx-auto">
+      <div className="max-w-5xl w-full mx-auto">
         <Intro />
-        <Portfolio />
-        <Timeline />
-        <Contact />
+        <SelectedWork />
+        <Interests />
       </div>
       <Footer />
     </div>
