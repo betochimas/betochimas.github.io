@@ -15,6 +15,9 @@ dist-ssr
 # Claude
 CLAUDE.md
 .claude/
+# Claude session / working docs (planning notes, not part of the published site)
+docs/
+SESSION_*.md
 
 # Editor directories and files
 .vscode/*
