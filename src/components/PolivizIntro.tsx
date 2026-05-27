@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import PolivizButton from './PolivizButton.tsx';
+import React from 'react';
 {/* import PolivizModeButton from './PolivizModeButton.tsx';*/}
 import PolivizModeButtonGroup from './PolivizModeButtonGroup.tsx';
 import PolivizYearButtonGroup from './PolivizYearButtonGroup.tsx';
@@ -14,7 +13,6 @@ interface PoliVizProps {
 // function PolvizIntro() {
 //const PolvizIntro = ({handleModeChange, handleYearChange}: PoliVizProps) => {
 const PolvizIntro: React.FC<PoliVizProps> = ({currentMode, currentYear, handleModeChange, handleYearChange}) => {
-    const [count, setCount] = useState(0);
     // State to hold the label passed from the PolivizMode and Year components
     //const [currentMode, setMode] = useState<string>('Results');
     //const [currentYear, setYear] = useState<string>('2024');
@@ -35,8 +33,8 @@ const PolvizIntro: React.FC<PoliVizProps> = ({currentMode, currentYear, handleMo
             <div className="pt-2 text-left pl-20">
                 <ul>
                     <li>Results: States shaded by which political party wins that state.</li>
-                    <li>Margin: Like "Results", but darker and lighter shades mean larger and smaller margins of victory, respectively.</li>
-                    <li>Adjusted: Like "Margin", but shades are adjusted according to the national popular vote margin.</li>
+                    <li>Margin: Like &quot;Results&quot;, but darker and lighter shades mean larger and smaller margins of victory, respectively.</li>
+                    <li>Adjusted: Like &quot;Margin&quot;, but shades are adjusted according to the national popular vote margin.</li>
                     <li>Swing: Shows the difference in margin across consecutive elections. </li>
                     <li>Trend: Shows the difference in adjusted margin across consecutive elections.</li>
                 </ul>

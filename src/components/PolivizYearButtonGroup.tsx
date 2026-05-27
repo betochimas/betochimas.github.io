@@ -10,7 +10,7 @@ interface PolivizYearButtonGroupProps {
 
 const Years = ["1992", "1996", "2000", "2004", "2008", "2012", "2016", "2020", "2024"];
 
-const PolivizYearButtonGroup: React.FC<PolivizYearButtonGroupProps> = ({ onYearChange, children }) => {
+const PolivizYearButtonGroup: React.FC<PolivizYearButtonGroupProps> = ({ onYearChange }) => {
     const [activeYearButton, setActiveButton] = useState<number | null>(null);
 
     const handleClick = (index: number) => {

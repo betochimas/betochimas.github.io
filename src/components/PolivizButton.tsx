@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface PolivizButtonProps {
   children: React.ReactNode;
@@ -8,15 +8,11 @@ interface PolivizButtonProps {
 
 function changeMode1() {
   document.body.classList.toggle('dark');
-};
+}
 
 
-const PolivizButton: React.FC<PolivizButtonProps> = ({ children, onClick, className }) => {
-  const [isPressed, setIsPressed] = useState(false);
-
-  const handleClick = () => {
-    setIsPressed(!isPressed);
-  }
+const PolivizButton: React.FC<PolivizButtonProps> = ({ children, className }) => {
+  const [isPressed] = useState(false);
 
   {/* bg-white dark:bg-stone-900 */}
   return (

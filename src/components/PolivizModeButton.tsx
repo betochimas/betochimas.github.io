@@ -1,4 +1,4 @@
-import React, { MouseEventHandler, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 {/* DEPRECATED */}
 interface PolivizModeButtonProps {
@@ -8,20 +8,7 @@ interface PolivizModeButtonProps {
   mode?: string;
 }
 
-let mode: string = "Results";
-
-function changeMode1() {
-  document.body.classList.toggle('dark');
-};
-
-function changeMode(newMode: string): MouseEventHandler<HTMLButtonElement> {
-  return (event) => {
-    mode = newMode;
-    document.body.classList.toggle('dark');
-  }
-}
-
-const PolivizModeButton: React.FC<PolivizModeButtonProps> = ({ children, onClick, className, mode }) => {
+const PolivizModeButton: React.FC<PolivizModeButtonProps> = ({ children, className }) => {
   const [isPressed, setIsPressed] = useState(false);
   const handleClick = () => {
     setIsPressed(true);

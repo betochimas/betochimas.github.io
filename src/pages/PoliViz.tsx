@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useState } from 'react'
 {/* All components exclusive to PoliViz page
 import USMap from "../data/USMap.jsx";*/}
-import USMapImported from '../components/USMapImported.tsx';
-import USMapBasic from '../components/USMapBasic.tsx';
 import USMapResults from '../components/USMapResults.tsx';
 import PolvizIntro from '../components/PolivizIntro.tsx';
 import Footer from '../components/Footer.jsx';

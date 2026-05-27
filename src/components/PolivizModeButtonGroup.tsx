@@ -10,7 +10,7 @@ interface PolivizModeButtonGroupProps {
 
 const Mode = ["Results", "Margin", "Adjusted", "Swing", "Trend"];
 
-const PolivizModeButtonGroup: React.FC<PolivizModeButtonGroupProps> = ({ children, onModeChange }) => {
+const PolivizModeButtonGroup: React.FC<PolivizModeButtonGroupProps> = ({ onModeChange }) => {
     const [activeModeButton, setActiveButton] = useState<number | null>(null);
 
     const handleClick = (index: number) => {

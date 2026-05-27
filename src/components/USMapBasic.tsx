@@ -1,21 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 
+export const USMapBasic = () => {
 
-interface USMapBasicProps {
-   currentMode: string;
-   currentYear: string;
-}
-
-type TextPosition = {
- x: string;
- y: string;
-} | "center"
-
-// export const USMapBasic = () => {
-export const USMapBasic = ({ currentMode, currentYear }: USMapBasicProps) => {
-   
-  const [usaState, setUsaState] = useState<string | null>(null);
+  const [usaState] = useState<string | null>(null);
   const onHoverUSAStateColor = "slate";
   const onHoverUSAStateStrokeColor = "slate";
 

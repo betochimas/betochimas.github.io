@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import PoliViz from './pages/PoliViz.tsx';
@@ -9,8 +8,6 @@ import Page404 from './pages/Page404';
 import Navigation from './components/Navigation';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
     <>
       <Router>
