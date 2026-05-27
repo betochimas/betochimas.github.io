@@ -20,26 +20,21 @@ function PoliViz() {
   
     return (
       <>
-        <div className="bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-300 font-inter">
-          <PolvizIntro 
+        <div className="bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark font-inter">
+          <PolvizIntro
             currentMode={currentMode}
-            currentYear={currentYear} 
+            currentYear={currentYear}
             handleModeChange={setMode}
             handleYearChange={setYear}
           />
-          {/*<div className="h-24 md:h-10 lg:h-2"></div>*/}
           <div className="h-48 md:h-32 lg:h-24"></div>
-          {/*<USMapImported />*/}
-          {/*<USMapBasic />*/}
-          <USMapResults 
+          <USMapResults
             currentMode={currentMode}
-            currentYear={currentYear} 
+            currentYear={currentYear}
           />
         </div>
-        {/* min-h-screen */}
-        <div className="bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-300 h-10 font-inter">
-          <div className="bg-white dark:bg-stone-900 max-w-5xl w-12/12 mx-auto">
-          </div>
+        <div className="bg-surface dark:bg-surface-dark h-10 font-inter">
+          <div className="max-w-7xl w-full mx-auto"></div>
         </div>
         <Footer />
       </>

@@ -10,11 +10,11 @@ import type { Conflict, Battle, Participant } from '../data/conflictsApi.ts';
 const GITHUB_URL = 'https://github.com/betochimas/historical-conflicts-api';
 const STACK = ['Java 21', 'Spring Boot', 'PostgreSQL', 'Redis', 'JWT', 'Docker'];
 
-const card = 'border-2 border-stone-900 dark:border-white rounded-md';
-const chip = 'inline-block px-2 py-1 text-xs font-semibold border-2 border-stone-900 dark:border-white rounded-md';
-const btn = 'px-3 py-1 font-semibold border-2 border-stone-900 dark:border-white rounded-md ' +
-  'hover:bg-stone-900 hover:text-white dark:hover:bg-white dark:hover:text-stone-900 disabled:opacity-50';
-const input = 'w-full px-2 py-1 bg-transparent border-2 border-stone-900 dark:border-white rounded-md';
+const card = 'border border-muted dark:border-white/15 rounded-md';
+const chip = 'inline-block px-2 py-1 text-xs font-semibold bg-accent/10 text-accent border border-accent/30 rounded-md';
+const btn = 'px-3 py-1 font-semibold border border-accent text-accent rounded-md ' +
+  'hover:bg-accent hover:text-white transition-colors disabled:opacity-50';
+const input = 'w-full px-2 py-1 bg-transparent border border-muted dark:border-white/20 rounded-md focus:outline-none focus:border-accent';
 
 function fmtDate(d: string | null): string {
   return d ?? '—';
@@ -204,11 +204,11 @@ function HistoricalConflicts() {
 
   return (
     <>
-      <div className="bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-300 min-h-screen font-inter">
-        <div className="max-w-5xl w-12/12 mx-auto px-4 py-10">
+      <div className="bg-surface dark:bg-surface-dark text-ink dark:text-ink-dark min-h-screen font-inter">
+        <div className="max-w-7xl w-full mx-auto px-6 py-10">
 
           {/* Intro */}
-          <h1 className="text-3xl md:text-4xl font-bold dark:text-white">Historical Conflicts API</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-ink dark:text-ink-dark">Historical Conflicts API</h1>
           <p className="mt-2 max-w-3xl">
             A live demo of a REST API for cataloguing wars, their battles, and the nations involved.
             Data below is served by the running backend; the read endpoints are public, and the demo
@@ -236,7 +236,7 @@ function HistoricalConflicts() {
           {loggedIn && <CreateConflictForm onCreated={load} />}
 
           {/* Conflicts list */}
-          <h2 className="text-2xl font-semibold dark:text-white mb-3">Conflicts</h2>
+          <h2 className="text-2xl font-semibold text-ink dark:text-ink-dark mb-3">Conflicts</h2>
 
           {loading && <p className="italic">Loading…</p>}
           {error && (
@@ -257,7 +257,7 @@ function HistoricalConflicts() {
                       className="text-left flex-1"
                       onClick={() => setExpandedId(open ? null : c.id)}
                     >
-                      <span className="text-lg font-semibold dark:text-white">{c.name}</span>
+                      <span className="text-lg font-semibold text-ink dark:text-ink-dark">{c.name}</span>
                       <span className="ml-2 text-sm">
                         {c.conflictType} · {fmtDate(c.startDate)} – {fmtDate(c.endDate)}
                         {c.outcome ? ` · ${c.outcome}` : ''}
