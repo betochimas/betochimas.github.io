@@ -1,4 +1,5 @@
 import type { Project } from '../data/portfolio';
+import Button from './templates/Button';
 
 interface WorkRowProps {
   project: Project;
@@ -19,15 +20,9 @@ function WorkRow({ project }: WorkRowProps) {
           {description}
         </p>
         {link ? (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block rounded-md bg-accent hover:bg-accent-hover
-            px-5 py-2.5 text-sm font-semibold text-white transition-colors"
-          >
+          <Button href={link} variant="primary" external>
             {buttonLabel}
-          </a>
+          </Button>
         ) : (
           <span
             aria-disabled="true"
