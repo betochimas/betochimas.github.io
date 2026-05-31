@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import Footer from '../components/Footer.jsx';
+import ConflictMap from '../components/conflicts/ConflictMap.tsx';
 import {
   listConflicts, listBattles, listParticipants, listNations,
-  login, logout, isLoggedIn, createConflict, deleteConflict,
+  login, logout, isLoggedIn, createConflict, deleteConflict, fetchAtlas,
   CONFLICT_TYPES,
 } from '../data/conflictsApi.ts';
-import type { Conflict, Battle, Participant } from '../data/conflictsApi.ts';
+import type { Conflict, Battle, Participant, ConflictAtlas } from '../data/conflictsApi.ts';
 
 const GITHUB_URL = 'https://github.com/betochimas/historical-conflicts-api';
 const STACK = ['Java 21', 'Spring Boot', 'PostgreSQL', 'Redis', 'JWT', 'Docker'];
@@ -173,6 +174,10 @@ function HistoricalConflicts() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
+  // Atlas for the map+timeline. F2 shows the first conflict (WWI); the conflict
+  // selector that lets you switch arrives in F6 (needs the [H2] second seed).
+  const [atlas, setAtlas] = useState<ConflictAtlas | null>(null);
+  const [atlasError, setAtlasError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null);
@@ -188,6 +193,18 @@ function HistoricalConflicts() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Once conflicts load, pull the atlas for the first one to drive the map.
+  // Don't hardcode the id — WWI is simply the first conflict in seed order.
+  useEffect(() => {
+    if (conflicts.length === 0) return;
+    let cancelled = false;
+    setAtlas(null); setAtlasError(null);
+    fetchAtlas(conflicts[0].id)
+      .then(a => { if (!cancelled) setAtlas(a); })
+      .catch(e => { if (!cancelled) setAtlasError(e instanceof Error ? e.message : 'Failed to load map data.'); });
+    return () => { cancelled = true; };
+  }, [conflicts]);
 
   function handleLogout() { logout(); setLoggedIn(false); }
 
@@ -234,6 +251,24 @@ function HistoricalConflicts() {
           )}
 
           {loggedIn && <CreateConflictForm onCreated={load} />}
+
+          {/* Battle map */}
+          <h2 className="text-2xl font-semibold text-ink dark:text-ink-dark mb-1">Battle map</h2>
+          {(() => {
+            const pinned = atlas?.battles.filter(b => b.latitude != null && b.longitude != null).length ?? 0;
+            return (
+              <p className="text-sm mb-3">
+                {atlasError
+                  ? <span className="text-red-600 dark:text-red-400">Couldn’t load map data: {atlasError}</span>
+                  : atlas
+                    ? <>Showing <span className="font-semibold">{atlas.conflict.name}</span> — {pinned} {pinned === 1 ? 'battle' : 'battles'} with mapped coordinates.</>
+                    : <span className="italic">Loading map…</span>}
+              </p>
+            );
+          })()}
+          <ConflictMap battles={atlas?.battles ?? []} />
+
+          <div className="h-10" />
 
           {/* Conflicts list */}
           <h2 className="text-2xl font-semibold text-ink dark:text-ink-dark mb-3">Conflicts</h2>
