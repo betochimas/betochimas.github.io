@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Footer from '../components/Footer.jsx';
 import ConflictMap from '../components/conflicts/ConflictMap.tsx';
+import TimelineSlider from '../components/conflicts/TimelineSlider.tsx';
 import {
   listConflicts, listBattles, listParticipants, listNations,
   login, logout, isLoggedIn, createConflict, deleteConflict, fetchAtlas,
@@ -186,6 +187,9 @@ function HistoricalConflicts() {
   // selector that lets you switch arrives in F6 (needs the [H2] second seed).
   const [atlas, setAtlas] = useState<ConflictAtlas | null>(null);
   const [atlasError, setAtlasError] = useState<string | null>(null);
+  // Time-slider position (YYYY-MM-DD). Null until the user scrubs; the slider
+  // then defaults to the conflict's end date, so the whole conflict shows first.
+  const [currentDate, setCurrentDate] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null);
@@ -207,7 +211,7 @@ function HistoricalConflicts() {
   useEffect(() => {
     if (conflicts.length === 0) return;
     let cancelled = false;
-    setAtlas(null); setAtlasError(null);
+    setAtlas(null); setAtlasError(null); setCurrentDate(null);
     fetchAtlas(conflicts[0].id)
       .then(a => { if (!cancelled) setAtlas(a); })
       .catch(e => { if (!cancelled) setAtlasError(e instanceof Error ? e.message : 'Failed to load map data.'); });
@@ -226,6 +230,16 @@ function HistoricalConflicts() {
       if (!isLoggedIn()) setLoggedIn(false); // token expired
     }
   }
+
+  // Effective slider date: the user's scrub position, else the conflict's end
+  // date (so the full conflict is shown until they interact). The active set is
+  // every battle whose date has passed; with no date it's all battles.
+  const sliderDate = currentDate ?? atlas?.conflict.endDate ?? atlas?.conflict.startDate ?? null;
+  const activeBattleIds = useMemo(() => {
+    if (!atlas) return new Set<number>();
+    if (!sliderDate) return new Set(atlas.battles.map(b => b.id));
+    return new Set(atlas.battles.filter(b => b.date != null && b.date <= sliderDate).map(b => b.id));
+  }, [atlas, sliderDate]);
 
   return (
     <>
@@ -288,7 +302,19 @@ function HistoricalConflicts() {
             participants={atlas?.participants ?? NO_PARTICIPANTS}
             borderYear={borderYearFor(atlas?.conflict.startDate)}
             theaters={atlas?.theaters ?? NO_THEATERS}
+            activeBattleIds={activeBattleIds}
           />
+
+          {atlas && atlas.conflict.startDate && atlas.conflict.endDate
+            && atlas.conflict.startDate < atlas.conflict.endDate && (
+            <TimelineSlider
+              startDate={atlas.conflict.startDate}
+              endDate={atlas.conflict.endDate}
+              currentDate={sliderDate ?? atlas.conflict.endDate}
+              onChange={setCurrentDate}
+              battles={atlas.battles}
+            />
+          )}
 
           <div className="h-10" />
 

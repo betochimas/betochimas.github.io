@@ -19,14 +19,18 @@ export interface TheaterHullProps {
   theaterId: number;
   name: string;
   color: string;
+  active: boolean; // true once >=1 of the theater's battles has occurred (F5)
 }
 
 // One convex-hull polygon per theater that has >=3 coordinate-bearing battles.
 // Theaters with fewer points (or collinear points, where convex() returns null)
 // are omitted — their individual battle pins remain as the fallback.
+// `activeBattleIds` (the time-slider's set of battles whose date has passed)
+// flags each hull active; omit it to treat every theater as active.
 export function theaterHullsGeoJSON(
   theaters: AtlasTheater[],
   battles: AtlasBattle[],
+  activeBattleIds?: Set<number>,
 ): FeatureCollection<Polygon, TheaterHullProps> {
   const coordById = new Map<number, [number, number]>();
   for (const b of battles) {
@@ -52,6 +56,7 @@ export function theaterHullsGeoJSON(
         theaterId: theater.id,
         name: theater.name,
         color: THEATER_COLORS[i % THEATER_COLORS.length],
+        active: activeBattleIds ? theater.battleIds.some((id) => activeBattleIds.has(id)) : true,
       },
     });
   });

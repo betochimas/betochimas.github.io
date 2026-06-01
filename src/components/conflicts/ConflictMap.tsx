@@ -25,7 +25,9 @@ import { theaterHullsGeoJSON } from './theaterHulls';
 // carry the color. The map follows the site's light/dark theme.
 //
 // Layers, bottom to top: CARTO basemap -> participant nation borders (F3) ->
-// battle pins. (Theater hulls land in F4, the time-slider in F5.)
+// theater hulls (F4) -> battle pins. The time-slider (F5) drives an `active`
+// flag baked into the pin/hull features: active battles render bright + larger,
+// inactive ones dim; a theater's hull is hidden until one of its battles is active.
 // ---------------------------------------------------------------------------
 
 const CARTO_ATTRIBUTION =
@@ -63,15 +65,19 @@ const battleLayer: CircleLayerSpecification = {
   type: 'circle',
   source: BATTLE_SOURCE,
   paint: {
-    'circle-radius': ['interpolate', ['linear'], ['zoom'], 3, 5, 8, 9],
+    'circle-radius': ['case', ['get', 'active'],
+      ['interpolate', ['linear'], ['zoom'], 3, 6, 8, 10],
+      ['interpolate', ['linear'], ['zoom'], 3, 3, 8, 5],
+    ],
     'circle-color': '#DC2626',
-    'circle-stroke-width': 2,
+    'circle-stroke-width': ['case', ['get', 'active'], 2.5, 1],
     'circle-stroke-color': '#FFFFFF',
-    'circle-opacity': 0.9,
+    'circle-opacity': ['case', ['get', 'active'], 0.95, 0.3],
+    'circle-stroke-opacity': ['case', ['get', 'active'], 1, 0.4],
   },
 };
 
-function battlesToGeoJSON(battles: AtlasBattle[]): FeatureCollection<Point> {
+function battlesToGeoJSON(battles: AtlasBattle[], activeBattleIds?: Set<number>): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
     features: battles
@@ -79,7 +85,10 @@ function battlesToGeoJSON(battles: AtlasBattle[]): FeatureCollection<Point> {
       .map((b) => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [b.longitude as number, b.latitude as number] },
-        properties: { id: b.id, name: b.name, seq: b.seq },
+        properties: {
+          id: b.id, name: b.name, seq: b.seq,
+          active: activeBattleIds ? activeBattleIds.has(b.id) : true,
+        },
       })),
   };
 }
@@ -136,14 +145,14 @@ const theaterFillLayer: FillLayerSpecification = {
   id: THEATER_FILL,
   type: 'fill',
   source: THEATER_SOURCE,
-  paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.12 },
+  paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['get', 'active'], 0.13, 0] },
 };
 
 const theaterLineLayer: LineLayerSpecification = {
   id: THEATER_LINE,
   type: 'line',
   source: THEATER_SOURCE,
-  paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.8 },
+  paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': ['case', ['get', 'active'], 0.85, 0] },
 };
 
 interface ConflictMapProps {
@@ -151,11 +160,18 @@ interface ConflictMapProps {
   participants: AtlasParticipant[];
   borderYear: number | null;
   theaters: AtlasTheater[];
+  activeBattleIds: Set<number>;
 }
 
-function ConflictMap({ battles, participants, borderYear, theaters }: ConflictMapProps) {
+function ConflictMap({ battles, participants, borderYear, theaters, activeBattleIds }: ConflictMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  // Latest active-battle set, read by the data effects when they (re)bake the
+  // pin/hull features. Kept in a ref so those effects don't re-run — and re-fit
+  // the map — every time the slider moves; the dedicated effect below handles
+  // live active-state updates without refitting.
+  const activeRef = useRef(activeBattleIds);
+  activeRef.current = activeBattleIds;
   // Follow the site theme (Tailwind `dark` class on <html>) so the basemap
   // never clashes with the page. Changing it rebuilds the map below.
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
@@ -189,10 +205,12 @@ function ConflictMap({ battles, participants, borderYear, theaters }: ConflictMa
   }, [dark]);
 
   // Battle pins: add on first load, update on change, re-add after a rebuild.
+  // Bakes current active-state from the ref; live slider updates are handled by
+  // the active-state effect (which doesn't refit), so active changes aren't a dep.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const data = battlesToGeoJSON(battles);
+    const data = battlesToGeoJSON(battles, activeRef.current);
     const apply = () => {
       const src = map.getSource(BATTLE_SOURCE) as GeoJSONSource | undefined;
       if (src) {
@@ -264,7 +282,7 @@ function ConflictMap({ battles, participants, borderYear, theaters }: ConflictMa
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const data = theaterHullsGeoJSON(theaters, battles);
+    const data = theaterHullsGeoJSON(theaters, battles, activeRef.current);
     const apply = () => {
       const src = map.getSource(THEATER_SOURCE) as GeoJSONSource | undefined;
       if (src) {
@@ -283,6 +301,26 @@ function ConflictMap({ battles, participants, borderYear, theaters }: ConflictMa
     map.once('load', apply);
     return () => { map.off('load', apply); };
   }, [theaters, battles, dark]);
+
+  // Active-state updates as the time-slider moves: re-bake the `active` flag into
+  // the pin + hull features (no map refit). The data effects above own creating
+  // the sources; here we only setData on whichever already exist.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      const bsrc = map.getSource(BATTLE_SOURCE) as GeoJSONSource | undefined;
+      if (bsrc) bsrc.setData(battlesToGeoJSON(battles, activeBattleIds));
+      const tsrc = map.getSource(THEATER_SOURCE) as GeoJSONSource | undefined;
+      if (tsrc) tsrc.setData(theaterHullsGeoJSON(theaters, battles, activeBattleIds));
+    };
+    if (map.isStyleLoaded()) {
+      apply();
+      return;
+    }
+    map.once('load', apply);
+    return () => { map.off('load', apply); };
+  }, [activeBattleIds, battles, theaters]);
 
   return (
     <div className="w-full h-80 md:h-[28rem] rounded-md overflow-hidden border border-muted dark:border-white/15">
