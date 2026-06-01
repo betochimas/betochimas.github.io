@@ -6,7 +6,14 @@ import {
   login, logout, isLoggedIn, createConflict, deleteConflict, fetchAtlas,
   CONFLICT_TYPES,
 } from '../data/conflictsApi.ts';
-import type { Conflict, Battle, Participant, ConflictAtlas } from '../data/conflictsApi.ts';
+import type {
+  Conflict, Battle, Participant, ConflictAtlas, AtlasBattle, AtlasParticipant,
+} from '../data/conflictsApi.ts';
+import { borderYearFor } from '../data/nationBasemapAliases.ts';
+
+// Stable empty arrays so the map's effects don't re-run while the atlas loads.
+const NO_BATTLES: AtlasBattle[] = [];
+const NO_PARTICIPANTS: AtlasParticipant[] = [];
 
 const GITHUB_URL = 'https://github.com/betochimas/historical-conflicts-api';
 const STACK = ['Java 21', 'Spring Boot', 'PostgreSQL', 'Redis', 'JWT', 'Docker'];
@@ -256,17 +263,25 @@ function HistoricalConflicts() {
           <h2 className="text-2xl font-semibold text-ink dark:text-ink-dark mb-1">Battle map</h2>
           {(() => {
             const pinned = atlas?.battles.filter(b => b.latitude != null && b.longitude != null).length ?? 0;
+            const year = borderYearFor(atlas?.conflict.startDate);
             return (
               <p className="text-sm mb-3">
                 {atlasError
                   ? <span className="text-red-600 dark:text-red-400">Couldn’t load map data: {atlasError}</span>
                   : atlas
-                    ? <>Showing <span className="font-semibold">{atlas.conflict.name}</span> — {pinned} {pinned === 1 ? 'battle' : 'battles'} with mapped coordinates.</>
+                    ? <>
+                        Showing <span className="font-semibold">{atlas.conflict.name}</span> — {pinned} {pinned === 1 ? 'battle' : 'battles'} with mapped coordinates
+                        {year ? <>; participant nations shaded with {year} borders.</> : '.'}
+                      </>
                     : <span className="italic">Loading map…</span>}
               </p>
             );
           })()}
-          <ConflictMap battles={atlas?.battles ?? []} />
+          <ConflictMap
+            battles={atlas?.battles ?? NO_BATTLES}
+            participants={atlas?.participants ?? NO_PARTICIPANTS}
+            borderYear={borderYearFor(atlas?.conflict.startDate)}
+          />
 
           <div className="h-10" />
 

@@ -23,6 +23,29 @@ function Footer() {
           </a>
         </div>
       </div>
+      <div className="max-w-7xl mx-auto px-6 pb-6 -mt-3">
+        <p className="text-[11px] text-ink/40 dark:text-ink-dark/40 text-center sm:text-left">
+          Historical national borders ©{' '}
+          <a
+            href="https://github.com/aourednik/historical-basemaps"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-accent"
+          >
+            aourednik/historical-basemaps
+          </a>{' '}
+          (
+          <a
+            href="https://creativecommons.org/licenses/by-sa/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-accent"
+          >
+            CC BY-SA 4.0
+          </a>
+          ).
+        </p>
+      </div>
     </footer>
   );
 }
