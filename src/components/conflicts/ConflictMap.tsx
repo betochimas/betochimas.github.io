@@ -8,12 +8,15 @@ import type {
   StyleSpecification,
   GeoJSONSource,
   CircleLayerSpecification,
+  FillLayerSpecification,
+  LineLayerSpecification,
   FilterSpecification,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Point } from 'geojson';
-import type { AtlasBattle, AtlasParticipant } from '../../data/conflictsApi';
+import type { AtlasBattle, AtlasParticipant, AtlasTheater } from '../../data/conflictsApi';
 import { basemapNamesFor } from '../../data/nationBasemapAliases';
+import { theaterHullsGeoJSON } from './theaterHulls';
 
 // ---------------------------------------------------------------------------
 // Base style — CARTO raster basemaps. No API key, free with attribution.
@@ -122,13 +125,35 @@ function loadBorders(year: number): Promise<FeatureCollection> {
   return p;
 }
 
+// --- Theater hulls (F4) ----------------------------------------------------
+// One convex hull per theater (>=3 coord battles), above the borders and below
+// the pins. A single fill+line pair, colored per-feature via the hull's `color`.
+const THEATER_SOURCE = 'theaters';
+const THEATER_FILL = 'theater-fill';
+const THEATER_LINE = 'theater-line';
+
+const theaterFillLayer: FillLayerSpecification = {
+  id: THEATER_FILL,
+  type: 'fill',
+  source: THEATER_SOURCE,
+  paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.12 },
+};
+
+const theaterLineLayer: LineLayerSpecification = {
+  id: THEATER_LINE,
+  type: 'line',
+  source: THEATER_SOURCE,
+  paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.8 },
+};
+
 interface ConflictMapProps {
   battles: AtlasBattle[];
   participants: AtlasParticipant[];
   borderYear: number | null;
+  theaters: AtlasTheater[];
 }
 
-function ConflictMap({ battles, participants, borderYear }: ConflictMapProps) {
+function ConflictMap({ battles, participants, borderYear, theaters }: ConflictMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   // Follow the site theme (Tailwind `dark` class on <html>) so the basemap
@@ -212,8 +237,10 @@ function ConflictMap({ battles, participants, borderYear }: ConflictMapProps) {
         map.setFilter(BORDER_FILL, filter);
         map.setFilter(BORDER_LINE, filter);
       } else {
-        // Insert beneath the pins if they already exist (else they land on top later).
-        const beforeId = map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
+        // Sit beneath the theater hulls (else beneath the pins, else on top for now).
+        const beforeId = map.getLayer(THEATER_FILL)
+          ? THEATER_FILL
+          : map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
         map.addSource(BORDER_SOURCE, { type: 'geojson', data: fc });
         map.addLayer({
           id: BORDER_FILL, type: 'fill', source: BORDER_SOURCE, filter,
@@ -231,6 +258,31 @@ function ConflictMap({ battles, participants, borderYear }: ConflictMapProps) {
     else map.once('load', run);
     return () => { cancelled = true; map.off('load', run); };
   }, [participants, borderYear, dark]);
+
+  // Theater convex hulls (turf.js), above the borders and below the pins.
+  // Recomputed when theaters/battles change; re-added after a theme rebuild.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const data = theaterHullsGeoJSON(theaters, battles);
+    const apply = () => {
+      const src = map.getSource(THEATER_SOURCE) as GeoJSONSource | undefined;
+      if (src) {
+        src.setData(data);
+      } else {
+        const beforeId = map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
+        map.addSource(THEATER_SOURCE, { type: 'geojson', data });
+        map.addLayer(theaterFillLayer, beforeId);
+        map.addLayer(theaterLineLayer, beforeId);
+      }
+    };
+    if (map.isStyleLoaded()) {
+      apply();
+      return;
+    }
+    map.once('load', apply);
+    return () => { map.off('load', apply); };
+  }, [theaters, battles, dark]);
 
   return (
     <div className="w-full h-80 md:h-[28rem] rounded-md overflow-hidden border border-muted dark:border-white/15">

@@ -7,13 +7,14 @@ import {
   CONFLICT_TYPES,
 } from '../data/conflictsApi.ts';
 import type {
-  Conflict, Battle, Participant, ConflictAtlas, AtlasBattle, AtlasParticipant,
+  Conflict, Battle, Participant, ConflictAtlas, AtlasBattle, AtlasParticipant, AtlasTheater,
 } from '../data/conflictsApi.ts';
 import { borderYearFor } from '../data/nationBasemapAliases.ts';
 
 // Stable empty arrays so the map's effects don't re-run while the atlas loads.
 const NO_BATTLES: AtlasBattle[] = [];
 const NO_PARTICIPANTS: AtlasParticipant[] = [];
+const NO_THEATERS: AtlasTheater[] = [];
 
 const GITHUB_URL = 'https://github.com/betochimas/historical-conflicts-api';
 const STACK = ['Java 21', 'Spring Boot', 'PostgreSQL', 'Redis', 'JWT', 'Docker'];
@@ -264,6 +265,10 @@ function HistoricalConflicts() {
           {(() => {
             const pinned = atlas?.battles.filter(b => b.latitude != null && b.longitude != null).length ?? 0;
             const year = borderYearFor(atlas?.conflict.startDate);
+            const coordIds = new Set(
+              atlas?.battles.filter(b => b.latitude != null && b.longitude != null).map(b => b.id) ?? [],
+            );
+            const hulls = atlas?.theaters.filter(t => t.battleIds.filter(id => coordIds.has(id)).length >= 3).length ?? 0;
             return (
               <p className="text-sm mb-3">
                 {atlasError
@@ -271,7 +276,8 @@ function HistoricalConflicts() {
                   : atlas
                     ? <>
                         Showing <span className="font-semibold">{atlas.conflict.name}</span> — {pinned} {pinned === 1 ? 'battle' : 'battles'} with mapped coordinates
-                        {year ? <>; participant nations shaded with {year} borders.</> : '.'}
+                        {year ? <>; nations shaded with {year} borders</> : ''}
+                        {hulls > 0 ? <>; {hulls} theater {hulls === 1 ? 'hull' : 'hulls'} outlined.</> : '.'}
                       </>
                     : <span className="italic">Loading map…</span>}
               </p>
@@ -281,6 +287,7 @@ function HistoricalConflicts() {
             battles={atlas?.battles ?? NO_BATTLES}
             participants={atlas?.participants ?? NO_PARTICIPANTS}
             borderYear={borderYearFor(atlas?.conflict.startDate)}
+            theaters={atlas?.theaters ?? NO_THEATERS}
           />
 
           <div className="h-10" />
