@@ -19,39 +19,62 @@ import { basemapNamesFor } from '../../data/nationBasemapAliases';
 import { theaterHullsGeoJSON } from './theaterHulls';
 
 // ---------------------------------------------------------------------------
-// Base style — CARTO raster basemaps. No API key, free with attribution.
-// "Positron" (light) / "Dark Matter" (dark) are deliberately muted and grey,
-// which reads as a restrained, almost-historical look and lets the battle pins
-// carry the color. The map follows the site's light/dark theme.
+// OpenFreeMap vector basemap (https://openfreemap.org) — free, no API key,
+// MapLibre-native. We fetch their published style JSON then strip the two
+// source-layers that carry modern political content so the historical GeoJSON
+// overlay is the sole source of political context on the map.
 //
-// Layers, bottom to top: CARTO basemap -> participant nation borders (F3) ->
-// theater hulls (F4) -> battle pins. The time-slider (F5) drives an `active`
-// flag baked into the pin/hull features: active battles render bright + larger,
-// inactive ones dim; a theater's hull is hidden until one of its battles is active.
+// Stripped (verified against the live positron/dark style JSON):
+//   source-layer=boundary  boundary_2 (country), boundary_3 (state/province),
+//                          boundary_disputed — all admin boundary line layers
+//   source-layer=place     label_country_{1,2,3}, label_state, label_city,
+//                          label_city_capital, label_town, label_village,
+//                          label_other — every modern political name label
+//
+// Kept: ne2_shaded raster (physical shaded relief, positron only), landcover,
+// landuse, water, waterway, water_name (ocean/sea/river labels — timeless),
+// transportation, building, park.
+//
+// Attribution is embedded in the fetched style's sources (© OpenStreetMap
+// contributors, © OpenMapTiles) and surfaced automatically by MapLibre's
+// attributionControl — no manual attribution string needed.
+//
+// Layers, bottom to top: OFM base (terrain/water, no modern politics) →
+// historical-context borders (all ~177 nations, very dim; G2) →
+// participant nation borders (highlighted; G1/F3) →
+// theater hulls (F4; G3 will remove these) → battle pins.
+// The time-slider (F5) drives an `active` flag on pins/hulls.
 // ---------------------------------------------------------------------------
 
-const CARTO_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
-  '&copy; <a href="https://carto.com/attributions">CARTO</a>';
+const OFM_STYLE_CACHE = new Map<string, Promise<StyleSpecification>>();
 
-function basemapStyle(dark: boolean): StyleSpecification {
-  const variant = dark ? 'dark_all' : 'light_all';
-  return {
-    version: 8,
-    sources: {
-      carto: {
-        type: 'raster',
-        // Sub-domains a–d spread tile requests; {z}/{x}/{y} only (MapLibre does
-        // not substitute CARTO's retina {r} token, so request standard tiles).
-        tiles: ['a', 'b', 'c', 'd'].map(
-          (s) => `https://${s}.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}.png`,
-        ),
-        tileSize: 256,
-        attribution: CARTO_ATTRIBUTION,
-      },
-    },
-    layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
-  };
+function fetchOFMStyle(dark: boolean): Promise<StyleSpecification> {
+  const variant = dark ? 'dark' : 'positron';
+  let p = OFM_STYLE_CACHE.get(variant);
+  if (!p) {
+    p = fetch(`https://tiles.openfreemap.org/styles/${variant}`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`OFM style: HTTP ${r.status}`);
+        return r.json() as Promise<StyleSpecification>;
+      })
+      .then((style) => {
+        // Drop every layer whose source-layer is 'boundary' (country/state admin
+        // lines) or 'place' (all political name labels, country down to village).
+        // Everything else — physical relief, water, roads, ocean names — is kept.
+        style.layers = style.layers.filter(
+          (layer) =>
+            (layer as { 'source-layer'?: string })['source-layer'] !== 'boundary' &&
+            (layer as { 'source-layer'?: string })['source-layer'] !== 'place',
+        );
+        return style;
+      })
+      .catch((e) => {
+        OFM_STYLE_CACHE.delete(variant); // allow a later retry
+        throw e;
+      });
+    OFM_STYLE_CACHE.set(variant, p);
+  }
+  return p;
 }
 
 // --- Battle pins -----------------------------------------------------------
@@ -112,8 +135,10 @@ function fitToBattles(map: MapLibreMap, fc: FeatureCollection<Point>): void {
 // under public/geo/world_<year>.geojson. Fetched lazily and cached across the
 // component lifetime (so a theme rebuild or conflict switch doesn't refetch).
 const BORDER_SOURCE = 'borders';
-const BORDER_FILL = 'border-fill';
-const BORDER_LINE = 'border-line';
+const BORDER_FILL_CTX = 'border-fill-ctx'; // all nations, dim historical context (G2)
+const BORDER_LINE_CTX = 'border-line-ctx'; // all nations, dim historical context (G2)
+const BORDER_FILL = 'border-fill';          // participant nations, highlighted
+const BORDER_LINE = 'border-line';          // participant nations, highlighted
 
 const borderCache = new Map<number, Promise<FeatureCollection>>();
 
@@ -175,6 +200,11 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
   // Follow the site theme (Tailwind `dark` class on <html>) so the basemap
   // never clashes with the page. Changing it rebuilds the map below.
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  // Incremented each time a new MapLibre instance is ready. fetchOFMStyle() is
+  // async so data effects (battle, border, theater) run with a null mapRef if
+  // they fire before the style resolves; mapKey going up signals them to re-run
+  // once the map is live. Data effects include mapKey in their dep arrays.
+  const [mapKey, setMapKey] = useState(0);
 
   useEffect(() => {
     const obs = new MutationObserver(() =>
@@ -184,23 +214,28 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     return () => obs.disconnect();
   }, []);
 
-  // Create / recreate the map. Recreates on theme change; the data effects below
-  // also depend on `dark`, so they re-run in the same commit and re-add their
-  // layers to the fresh map.
+  // Create / recreate the map. Recreates on theme change. fetchOFMStyle() is
+  // cached after first load so subsequent calls (theme toggle) resolve quickly.
+  // Once the map is ready, setMapKey() fires so the data effects below re-run.
   useEffect(() => {
     if (!containerRef.current) return;
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: basemapStyle(dark),
-      center: [10, 30],
-      zoom: 1.4,
-      attributionControl: { compact: true },
+    let cancelled = false;
+    void fetchOFMStyle(dark).then((style) => {
+      if (cancelled || !containerRef.current) return;
+      const m = new MapLibreMap({
+        container: containerRef.current,
+        style,
+        center: [10, 30],
+        zoom: 1.4,
+        attributionControl: { compact: true },
+      });
+      m.addControl(new NavigationControl({ showCompass: false }), 'top-right');
+      mapRef.current = m;
+      setMapKey((k) => k + 1);
     });
-    map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-    mapRef.current = map;
     return () => {
-      map.remove();
-      mapRef.current = null;
+      cancelled = true;
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
     };
   }, [dark]);
 
@@ -229,11 +264,15 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     }
     map.once('load', apply);
     return () => { map.off('load', apply); };
-  }, [battles, dark]);
+  }, [battles, dark, mapKey]);
 
-  // Participant nation borders, beneath the pins. Decorative: if the GeoJSON
-  // fails to load the pins still render. Re-filters when participants change,
-  // swaps the source when the border year changes.
+  // Nation borders — two tiers:
+  //   1. Context (G2): all ~177 world_YYYY nations rendered at very low opacity
+  //      so every historical border is visible as geographic background.
+  //   2. Participant highlight (F3/G1): conflict nations rendered on top at
+  //      stronger opacity. (Will become coalition-colored in G4 once the API
+  //      supplies a `side` field on each participant.)
+  // Decorative: if the GeoJSON fails to load, the pins still render.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || borderYear == null) return;
@@ -251,22 +290,36 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
       if (cancelled || mapRef.current !== map) return;
       const src = map.getSource(BORDER_SOURCE) as GeoJSONSource | undefined;
       if (src) {
+        // Source already exists (conflict/participant change, no map rebuild).
+        // Context layers cover all features with no filter; setData refreshes them.
         src.setData(fc);
         map.setFilter(BORDER_FILL, filter);
         map.setFilter(BORDER_LINE, filter);
       } else {
-        // Sit beneath the theater hulls (else beneath the pins, else on top for now).
+        // Sit beneath the theater hulls (else beneath the battle pins, else on top).
         const beforeId = map.getLayer(THEATER_FILL)
           ? THEATER_FILL
           : map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
         map.addSource(BORDER_SOURCE, { type: 'geojson', data: fc });
+        // 1. Context fill — all nations, very dim (G2).
+        map.addLayer({
+          id: BORDER_FILL_CTX, type: 'fill', source: BORDER_SOURCE,
+          paint: { 'fill-color': '#64748B', 'fill-opacity': dark ? 0.10 : 0.07 },
+        }, beforeId);
+        // 2. Context line — all nations, faint border (G2).
+        map.addLayer({
+          id: BORDER_LINE_CTX, type: 'line', source: BORDER_SOURCE,
+          paint: { 'line-color': '#64748B', 'line-width': 0.5, 'line-opacity': dark ? 0.35 : 0.28 },
+        }, beforeId);
+        // 3. Participant fill — conflict nations, highlighted on top of context.
         map.addLayer({
           id: BORDER_FILL, type: 'fill', source: BORDER_SOURCE, filter,
-          paint: { 'fill-color': '#1E3F7A', 'fill-opacity': 0.18 },
+          paint: { 'fill-color': '#1E3F7A', 'fill-opacity': 0.20 },
         }, beforeId);
+        // 4. Participant line — conflict nations, highlighted.
         map.addLayer({
           id: BORDER_LINE, type: 'line', source: BORDER_SOURCE, filter,
-          paint: { 'line-color': lineColor, 'line-width': 1.2, 'line-opacity': 0.7 },
+          paint: { 'line-color': lineColor, 'line-width': 1.4, 'line-opacity': 0.75 },
         }, beforeId);
       }
     };
@@ -275,7 +328,7 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     if (map.isStyleLoaded()) run();
     else map.once('load', run);
     return () => { cancelled = true; map.off('load', run); };
-  }, [participants, borderYear, dark]);
+  }, [participants, borderYear, dark, mapKey]);
 
   // Theater convex hulls (turf.js), above the borders and below the pins.
   // Recomputed when theaters/battles change; re-added after a theme rebuild.
@@ -300,7 +353,7 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     }
     map.once('load', apply);
     return () => { map.off('load', apply); };
-  }, [theaters, battles, dark]);
+  }, [theaters, battles, dark, mapKey]);
 
   // Active-state updates as the time-slider moves: re-bake the `active` flag into
   // the pin + hull features (no map refit). The data effects above own creating
