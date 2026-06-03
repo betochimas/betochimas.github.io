@@ -11,6 +11,7 @@ import type {
   Conflict, Battle, Participant, ConflictAtlas, AtlasBattle, AtlasParticipant,
 } from '../data/conflictsApi.ts';
 import { borderYearFor } from '../data/nationBasemapAliases.ts';
+import { coalitionColorMap } from '../components/conflicts/coalitionColors.ts';
 
 // Stable empty arrays so the map's effects don't re-run while the atlas loads.
 const NO_BATTLES: AtlasBattle[] = [];
@@ -288,6 +289,28 @@ function HistoricalConflicts() {
                         {year ? <>; nations shaded with {year} borders</> : ''}.
                       </>
                     : <span className="italic">Loading map…</span>}
+              </p>
+            );
+          })()}
+          {/* Coalition legend (G4): color → side, shared with the map via coalitionColorMap. */}
+          {atlas && (() => {
+            const colorMap = coalitionColorMap(atlas.participants);
+            if (colorMap.size === 0) return null;
+            return (
+              <p className="flex flex-wrap gap-2 mb-3" aria-label="Coalition legend">
+                {[...colorMap.entries()].map(([side, color]) => (
+                  <span
+                    key={side}
+                    className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold border border-muted dark:border-white/15 rounded-md"
+                  >
+                    <span
+                      className="inline-block w-3 h-3 rounded-sm"
+                      style={{ backgroundColor: color }}
+                      aria-hidden="true"
+                    />
+                    {side}
+                  </span>
+                ))}
               </p>
             );
           })()}

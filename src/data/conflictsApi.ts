@@ -102,6 +102,10 @@ export interface AtlasParticipant {
   role: string;
   troopsCommitted: number | null;
   casualties: number | null;
+  // Coalition / belligerent group (e.g. "Allied Powers" / "Central Powers"),
+  // free text, conflict-scoped (added 2026-06-02, G4). Drives coalition-colored
+  // nation shading + the map legend. Null until set.
+  side: string | null;
 }
 
 // Casualty/troop totals are summed from participants (battles carry no casualty

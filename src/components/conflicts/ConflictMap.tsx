@@ -9,11 +9,14 @@ import type {
   GeoJSONSource,
   CircleLayerSpecification,
   FilterSpecification,
+  ExpressionSpecification,
+  DataDrivenPropertyValueSpecification,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Point } from 'geojson';
 import type { AtlasBattle, AtlasParticipant } from '../../data/conflictsApi';
 import { basemapNamesFor } from '../../data/nationBasemapAliases';
+import { coalitionColorMap, COALITION_FALLBACK } from './coalitionColors';
 
 // ---------------------------------------------------------------------------
 // OpenFreeMap vector basemap (https://openfreemap.org) — free, no API key,
@@ -38,7 +41,7 @@ import { basemapNamesFor } from '../../data/nationBasemapAliases';
 //
 // Layers, bottom to top: OFM base (terrain/water, no modern politics) →
 // historical-context borders (all ~177 nations, very dim; G2) →
-// participant nation borders (highlighted; G1/F3) → battle pins.
+// participant nation borders (shaded by coalition side; G4) → battle pins.
 // The time-slider (F5) drives an `active` flag on the pins.
 // ---------------------------------------------------------------------------
 
@@ -135,6 +138,28 @@ const BORDER_FILL_CTX = 'border-fill-ctx'; // all nations, dim historical contex
 const BORDER_LINE_CTX = 'border-line-ctx'; // all nations, dim historical context (G2)
 const BORDER_FILL = 'border-fill';          // participant nations, highlighted
 const BORDER_LINE = 'border-line';          // participant nations, highlighted
+
+// Participant fill/line color: a MapLibre `match` on the basemap NAME → the
+// nation's coalition color (G4). Built from the same coalitionColorMap the
+// legend chips use, so map and legend never disagree. Each side's basemap NAMEs
+// (incl. aliases) map to its color; participants with a null `side` — and any
+// non-participant that slips through the layer filter — fall to the navy
+// fallback. Returns a flat color string when no participant carries a side.
+function coalitionColorExpr(
+  participants: AtlasParticipant[],
+): DataDrivenPropertyValueSpecification<string> {
+  const colorMap = coalitionColorMap(participants);
+  const sides = [...colorMap.keys()];
+  if (sides.length === 0) return COALITION_FALLBACK;
+  const branches = sides.flatMap((side) => [
+    basemapNamesFor(participants.filter((p) => p.side === side)),
+    colorMap.get(side) as string,
+  ]);
+  // The `match` tuple type can't be expressed from a spread-built array, so cast
+  // through unknown — the runtime shape (['match', input, label, out, …, default])
+  // is a valid MapLibre expression.
+  return ['match', ['get', 'NAME'], ...branches, COALITION_FALLBACK] as unknown as ExpressionSpecification;
+}
 
 const borderCache = new Map<number, Promise<FeatureCollection>>();
 
@@ -252,7 +277,8 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
     if (!map || borderYear == null) return;
     let cancelled = false;
     const filter = ['in', ['get', 'NAME'], ['literal', basemapNamesFor(participants)]] as FilterSpecification;
-    const lineColor = dark ? '#9DB8E6' : '#1E3F7A';
+    // Per-coalition fill/line color (G4), shared with the legend via coalitionColorMap.
+    const coalitionColor = coalitionColorExpr(participants);
 
     const apply = async () => {
       let fc: FeatureCollection;
@@ -266,9 +292,13 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
       if (src) {
         // Source already exists (conflict/participant change, no map rebuild).
         // Context layers cover all features with no filter; setData refreshes them.
+        // Re-apply the participant filter AND coalition colors (the new conflict's
+        // participants/sides differ).
         src.setData(fc);
         map.setFilter(BORDER_FILL, filter);
         map.setFilter(BORDER_LINE, filter);
+        map.setPaintProperty(BORDER_FILL, 'fill-color', coalitionColor);
+        map.setPaintProperty(BORDER_LINE, 'line-color', coalitionColor);
       } else {
         // Sit beneath the battle pins (else on top if the pins aren't added yet).
         const beforeId = map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
@@ -283,15 +313,15 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
           id: BORDER_LINE_CTX, type: 'line', source: BORDER_SOURCE,
           paint: { 'line-color': '#64748B', 'line-width': 0.5, 'line-opacity': dark ? 0.35 : 0.28 },
         }, beforeId);
-        // 3. Participant fill — conflict nations, highlighted on top of context.
+        // 3. Participant fill — conflict nations, shaded by coalition side (G4).
         map.addLayer({
           id: BORDER_FILL, type: 'fill', source: BORDER_SOURCE, filter,
-          paint: { 'fill-color': '#1E3F7A', 'fill-opacity': 0.20 },
+          paint: { 'fill-color': coalitionColor, 'fill-opacity': 0.30 },
         }, beforeId);
-        // 4. Participant line — conflict nations, highlighted.
+        // 4. Participant line — conflict nations, outlined in the same coalition color.
         map.addLayer({
           id: BORDER_LINE, type: 'line', source: BORDER_SOURCE, filter,
-          paint: { 'line-color': lineColor, 'line-width': 1.4, 'line-opacity': 0.75 },
+          paint: { 'line-color': coalitionColor, 'line-width': 1.4, 'line-opacity': 0.85 },
         }, beforeId);
       }
     };
