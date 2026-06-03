@@ -8,15 +8,12 @@ import type {
   StyleSpecification,
   GeoJSONSource,
   CircleLayerSpecification,
-  FillLayerSpecification,
-  LineLayerSpecification,
   FilterSpecification,
 } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Point } from 'geojson';
-import type { AtlasBattle, AtlasParticipant, AtlasTheater } from '../../data/conflictsApi';
+import type { AtlasBattle, AtlasParticipant } from '../../data/conflictsApi';
 import { basemapNamesFor } from '../../data/nationBasemapAliases';
-import { theaterHullsGeoJSON } from './theaterHulls';
 
 // ---------------------------------------------------------------------------
 // OpenFreeMap vector basemap (https://openfreemap.org) — free, no API key,
@@ -41,9 +38,8 @@ import { theaterHullsGeoJSON } from './theaterHulls';
 //
 // Layers, bottom to top: OFM base (terrain/water, no modern politics) →
 // historical-context borders (all ~177 nations, very dim; G2) →
-// participant nation borders (highlighted; G1/F3) →
-// theater hulls (F4; G3 will remove these) → battle pins.
-// The time-slider (F5) drives an `active` flag on pins/hulls.
+// participant nation borders (highlighted; G1/F3) → battle pins.
+// The time-slider (F5) drives an `active` flag on the pins.
 // ---------------------------------------------------------------------------
 
 const OFM_STYLE_CACHE = new Map<string, Promise<StyleSpecification>>();
@@ -78,8 +74,8 @@ function fetchOFMStyle(dark: boolean): Promise<StyleSpecification> {
 }
 
 // --- Battle pins -----------------------------------------------------------
-// One GeoJSON source so F4/F5 can drive styling from the feature properties
-// (active/inactive, theater color) without touching the DOM.
+// One GeoJSON source so the time-slider (F5) can drive styling from the feature
+// properties (active/inactive) without touching the DOM.
 const BATTLE_SOURCE = 'battles';
 const BATTLE_LAYER = 'battle-pins';
 
@@ -159,40 +155,18 @@ function loadBorders(year: number): Promise<FeatureCollection> {
   return p;
 }
 
-// --- Theater hulls (F4) ----------------------------------------------------
-// One convex hull per theater (>=3 coord battles), above the borders and below
-// the pins. A single fill+line pair, colored per-feature via the hull's `color`.
-const THEATER_SOURCE = 'theaters';
-const THEATER_FILL = 'theater-fill';
-const THEATER_LINE = 'theater-line';
-
-const theaterFillLayer: FillLayerSpecification = {
-  id: THEATER_FILL,
-  type: 'fill',
-  source: THEATER_SOURCE,
-  paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['get', 'active'], 0.13, 0] },
-};
-
-const theaterLineLayer: LineLayerSpecification = {
-  id: THEATER_LINE,
-  type: 'line',
-  source: THEATER_SOURCE,
-  paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': ['case', ['get', 'active'], 0.85, 0] },
-};
-
 interface ConflictMapProps {
   battles: AtlasBattle[];
   participants: AtlasParticipant[];
   borderYear: number | null;
-  theaters: AtlasTheater[];
   activeBattleIds: Set<number>;
 }
 
-function ConflictMap({ battles, participants, borderYear, theaters, activeBattleIds }: ConflictMapProps) {
+function ConflictMap({ battles, participants, borderYear, activeBattleIds }: ConflictMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  // Latest active-battle set, read by the data effects when they (re)bake the
-  // pin/hull features. Kept in a ref so those effects don't re-run — and re-fit
+  // Latest active-battle set, read by the battle-pins effect when it (re)bakes
+  // the pin features. Kept in a ref so that effect doesn't re-run — and re-fit
   // the map — every time the slider moves; the dedicated effect below handles
   // live active-state updates without refitting.
   const activeRef = useRef(activeBattleIds);
@@ -201,9 +175,9 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
   // never clashes with the page. Changing it rebuilds the map below.
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
   // Incremented each time a new MapLibre instance is ready. fetchOFMStyle() is
-  // async so data effects (battle, border, theater) run with a null mapRef if
-  // they fire before the style resolves; mapKey going up signals them to re-run
-  // once the map is live. Data effects include mapKey in their dep arrays.
+  // async so data effects (battle, border) run with a null mapRef if they fire
+  // before the style resolves; mapKey going up signals them to re-run once the
+  // map is live. Data effects include mapKey in their dep arrays.
   const [mapKey, setMapKey] = useState(0);
 
   useEffect(() => {
@@ -296,10 +270,8 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
         map.setFilter(BORDER_FILL, filter);
         map.setFilter(BORDER_LINE, filter);
       } else {
-        // Sit beneath the theater hulls (else beneath the battle pins, else on top).
-        const beforeId = map.getLayer(THEATER_FILL)
-          ? THEATER_FILL
-          : map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
+        // Sit beneath the battle pins (else on top if the pins aren't added yet).
+        const beforeId = map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
         map.addSource(BORDER_SOURCE, { type: 'geojson', data: fc });
         // 1. Context fill — all nations, very dim (G2).
         map.addLayer({
@@ -330,42 +302,15 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     return () => { cancelled = true; map.off('load', run); };
   }, [participants, borderYear, dark, mapKey]);
 
-  // Theater convex hulls (turf.js), above the borders and below the pins.
-  // Recomputed when theaters/battles change; re-added after a theme rebuild.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const data = theaterHullsGeoJSON(theaters, battles, activeRef.current);
-    const apply = () => {
-      const src = map.getSource(THEATER_SOURCE) as GeoJSONSource | undefined;
-      if (src) {
-        src.setData(data);
-      } else {
-        const beforeId = map.getLayer(BATTLE_LAYER) ? BATTLE_LAYER : undefined;
-        map.addSource(THEATER_SOURCE, { type: 'geojson', data });
-        map.addLayer(theaterFillLayer, beforeId);
-        map.addLayer(theaterLineLayer, beforeId);
-      }
-    };
-    if (map.isStyleLoaded()) {
-      apply();
-      return;
-    }
-    map.once('load', apply);
-    return () => { map.off('load', apply); };
-  }, [theaters, battles, dark, mapKey]);
-
   // Active-state updates as the time-slider moves: re-bake the `active` flag into
-  // the pin + hull features (no map refit). The data effects above own creating
-  // the sources; here we only setData on whichever already exist.
+  // the pin features (no map refit). The data effects above own creating the
+  // source; here we only setData on it if it already exists.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
       const bsrc = map.getSource(BATTLE_SOURCE) as GeoJSONSource | undefined;
       if (bsrc) bsrc.setData(battlesToGeoJSON(battles, activeBattleIds));
-      const tsrc = map.getSource(THEATER_SOURCE) as GeoJSONSource | undefined;
-      if (tsrc) tsrc.setData(theaterHullsGeoJSON(theaters, battles, activeBattleIds));
     };
     if (map.isStyleLoaded()) {
       apply();
@@ -373,7 +318,7 @@ function ConflictMap({ battles, participants, borderYear, theaters, activeBattle
     }
     map.once('load', apply);
     return () => { map.off('load', apply); };
-  }, [activeBattleIds, battles, theaters]);
+  }, [activeBattleIds, battles]);
 
   return (
     <div className="w-full h-80 md:h-[28rem] rounded-md overflow-hidden border border-muted dark:border-white/15">
