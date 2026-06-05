@@ -3,6 +3,7 @@ import {
   Map as MapLibreMap,
   NavigationControl,
   LngLatBounds,
+  Popup,
 } from 'maplibre-gl';
 import type {
   StyleSpecification,
@@ -87,12 +88,19 @@ const battleLayer: CircleLayerSpecification = {
   type: 'circle',
   source: BATTLE_SOURCE,
   paint: {
-    'circle-radius': ['case', ['get', 'active'],
-      ['interpolate', ['linear'], ['zoom'], 3, 6, 8, 10],
-      ['interpolate', ['linear'], ['zoom'], 3, 3, 8, 5],
+    // Small-ish pins (G5), keeping a size + opacity distinction: past/active
+    // battles read larger and brighter than future ones, both modest overall.
+    // NOTE: a property may contain only ONE zoom-based interpolate, and it must
+    // be the OUTERMOST expression — so the zoom curve is on the outside and the
+    // active/future branch lives in each interpolate stop (a `case` on the
+    // feature property is allowed there). Nesting two zoom interpolates inside a
+    // `case` is rejected by MapLibre ("Only one zoom-based … subexpression").
+    'circle-radius': ['interpolate', ['linear'], ['zoom'],
+      3, ['case', ['get', 'active'], 4, 2],   // zoom 3: active 4px / future 2px
+      8, ['case', ['get', 'active'], 6, 3],   // zoom 8: active 6px / future 3px
     ],
     'circle-color': '#DC2626',
-    'circle-stroke-width': ['case', ['get', 'active'], 2.5, 1],
+    'circle-stroke-width': ['case', ['get', 'active'], 1.5, 0.75],
     'circle-stroke-color': '#FFFFFF',
     'circle-opacity': ['case', ['get', 'active'], 0.95, 0.3],
     'circle-stroke-opacity': ['case', ['get', 'active'], 1, 0.4],
@@ -109,10 +117,59 @@ function battlesToGeoJSON(battles: AtlasBattle[], activeBattleIds?: Set<number>)
         geometry: { type: 'Point', coordinates: [b.longitude as number, b.latitude as number] },
         properties: {
           id: b.id, name: b.name, seq: b.seq,
+          // Baked for the click popup (G6b). Null coalesced to '' because feature
+          // properties round-trip through the tile/GeoJSON source as strings.
+          date: b.date ?? '', outcome: b.outcome ?? '',
           active: activeBattleIds ? activeBattleIds.has(b.id) : true,
         },
       })),
   };
+}
+
+// --- Battle popup (G6b) ----------------------------------------------------
+// Escape data-sourced text before injecting into the popup HTML.
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+}
+
+// "1914-09-06" → "6 Sep 1914" (UTC, matching the timeline labels).
+function fmtPopupDate(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+  });
+}
+
+function battlePopupHTML(props: { name?: unknown; date?: unknown; outcome?: unknown }): string {
+  const name = typeof props.name === 'string' ? props.name : 'Battle';
+  const date = typeof props.date === 'string' ? props.date : '';
+  const outcome = typeof props.outcome === 'string' ? props.outcome : '';
+  return (
+    `<div class="text-sm">` +
+    `<div class="font-semibold">${escapeHtml(name)}</div>` +
+    (date ? `<div class="opacity-70">${escapeHtml(fmtPopupDate(date))}</div>` : '') +
+    (outcome ? `<div class="mt-0.5">${escapeHtml(outcome)}</div>` : '') +
+    `</div>`
+  );
+}
+
+// Run `fn` once the map's style is ready, and return a cleanup that cancels a
+// still-pending wait. If the style is already loaded, run immediately; otherwise
+// wait for the next `idle`.
+//
+// IMPORTANT: do NOT use `once('load')` here. `load` fires exactly once in a
+// map's lifetime, so any *post-load* re-apply (e.g. switching the conflict)
+// registered on `load` is silently dropped whenever `isStyleLoaded()` is
+// transiently false — which it is right after a `setData`/`fitBounds` kicks off
+// tile streaming. `idle` fires after every render settles, so it reliably
+// catches both the first load and later updates.
+function runWhenReady(map: MapLibreMap, fn: () => void): () => void {
+  if (map.isStyleLoaded()) {
+    fn();
+    return () => {};
+  }
+  map.once('idle', fn);
+  return () => { map.off('idle', fn); };
 }
 
 function fitToBattles(map: MapLibreMap, fc: FeatureCollection<Point>): void {
@@ -254,15 +311,20 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
         map.addLayer(battleLayer);
         map.on('mouseenter', BATTLE_LAYER, () => { map.getCanvas().style.cursor = 'pointer'; });
         map.on('mouseleave', BATTLE_LAYER, () => { map.getCanvas().style.cursor = ''; });
+        // Click a pin → popup with the battle's name, date, outcome (G6b).
+        map.on('click', BATTLE_LAYER, (e) => {
+          const f = e.features?.[0];
+          if (!f) return;
+          const [lng, lat] = (f.geometry as Point).coordinates as [number, number];
+          new Popup({ offset: 10, closeButton: true, maxWidth: '240px' })
+            .setLngLat([lng, lat])
+            .setHTML(battlePopupHTML(f.properties ?? {}))
+            .addTo(map);
+        });
       }
       fitToBattles(map, data);
     };
-    if (map.isStyleLoaded()) {
-      apply();
-      return;
-    }
-    map.once('load', apply);
-    return () => { map.off('load', apply); };
+    return runWhenReady(map, apply);
   }, [battles, dark, mapKey]);
 
   // Nation borders — two tiers:
@@ -327,9 +389,8 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
     };
 
     const run = () => { void apply(); };
-    if (map.isStyleLoaded()) run();
-    else map.once('load', run);
-    return () => { cancelled = true; map.off('load', run); };
+    const cleanup = runWhenReady(map, run);
+    return () => { cancelled = true; cleanup(); };
   }, [participants, borderYear, dark, mapKey]);
 
   // Active-state updates as the time-slider moves: re-bake the `active` flag into
@@ -342,12 +403,7 @@ function ConflictMap({ battles, participants, borderYear, activeBattleIds }: Con
       const bsrc = map.getSource(BATTLE_SOURCE) as GeoJSONSource | undefined;
       if (bsrc) bsrc.setData(battlesToGeoJSON(battles, activeBattleIds));
     };
-    if (map.isStyleLoaded()) {
-      apply();
-      return;
-    }
-    map.once('load', apply);
-    return () => { map.off('load', apply); };
+    return runWhenReady(map, apply);
   }, [activeBattleIds, battles]);
 
   return (

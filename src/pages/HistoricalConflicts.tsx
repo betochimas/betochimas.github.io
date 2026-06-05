@@ -183,8 +183,9 @@ function HistoricalConflicts() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
-  // Atlas for the map+timeline. F2 shows the first conflict (WWI); the conflict
-  // selector that lets you switch arrives in F6 (needs the [H2] second seed).
+  // Atlas for the map+timeline, for whichever conflict the selector points at
+  // (G6a). Defaults to the first conflict once the list loads.
+  const [selectedConflictId, setSelectedConflictId] = useState<number | null>(null);
   const [atlas, setAtlas] = useState<ConflictAtlas | null>(null);
   const [atlasError, setAtlasError] = useState<string | null>(null);
   // Time-slider position (YYYY-MM-DD). Null until the user scrubs; the slider
@@ -206,17 +207,26 @@ function HistoricalConflicts() {
 
   useEffect(() => { load(); }, []);
 
-  // Once conflicts load, pull the atlas for the first one to drive the map.
-  // Don't hardcode the id — WWI is simply the first conflict in seed order.
+  // Default the map selection to the first conflict once the list loads (and
+  // re-seed it if the selected one disappears, e.g. after a delete). Don't
+  // hardcode an id — the first in seed order is simply the default.
   useEffect(() => {
-    if (conflicts.length === 0) return;
+    if (conflicts.length === 0) { setSelectedConflictId(null); return; }
+    setSelectedConflictId((prev) =>
+      prev != null && conflicts.some(c => c.id === prev) ? prev : conflicts[0].id);
+  }, [conflicts]);
+
+  // Pull the atlas for the selected conflict to drive the map + timeline.
+  // Switching conflicts resets the slider so the new one shows in full first.
+  useEffect(() => {
+    if (selectedConflictId == null) return;
     let cancelled = false;
     setAtlas(null); setAtlasError(null); setCurrentDate(null);
-    fetchAtlas(conflicts[0].id)
+    fetchAtlas(selectedConflictId)
       .then(a => { if (!cancelled) setAtlas(a); })
       .catch(e => { if (!cancelled) setAtlasError(e instanceof Error ? e.message : 'Failed to load map data.'); });
     return () => { cancelled = true; };
-  }, [conflicts]);
+  }, [selectedConflictId]);
 
   function handleLogout() { logout(); setLoggedIn(false); }
 
@@ -276,6 +286,20 @@ function HistoricalConflicts() {
 
           {/* Battle map */}
           <h2 className="text-2xl font-semibold text-ink dark:text-ink-dark mb-1">Battle map</h2>
+          {/* Conflict selector (G6a): drives the map, timeline, and legend below. */}
+          {conflicts.length > 0 && (
+            <div className="mb-2">
+              <label htmlFor="conflict-select" className="sr-only">Choose a conflict to map</label>
+              <select
+                id="conflict-select"
+                className={input + ' md:w-auto'}
+                value={selectedConflictId ?? ''}
+                onChange={e => setSelectedConflictId(Number(e.target.value))}
+              >
+                {conflicts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
           {(() => {
             const pinned = atlas?.battles.filter(b => b.latitude != null && b.longitude != null).length ?? 0;
             const year = borderYearFor(atlas?.conflict.startDate);

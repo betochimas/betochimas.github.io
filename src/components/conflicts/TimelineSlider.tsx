@@ -4,6 +4,11 @@ import type { AtlasBattle } from '../../data/conflictsApi';
 // owns `currentDate`; dragging fires `onChange`. The map highlights battles whose
 // date has passed. Tick marks sit above the slider at each battle's date and
 // brighten once that battle is active.
+//
+// The scrubber magnetically snaps onto a battle's date when the handle comes
+// within SNAP_FRACTION of the span of it (G6c) — so it's easy to land exactly
+// when a battle begins and read the war's state at that moment, while motion
+// between battles stays free. Tuned to feel sticky but not gluey.
 
 interface TimelineSliderProps {
   startDate: string;   // YYYY-MM-DD
@@ -14,6 +19,9 @@ interface TimelineSliderProps {
 }
 
 const DAY_MS = 86_400_000;
+// Half-width of each battle's magnetic zone, as a fraction of the total span.
+// 1.5% per side → a ~3%-of-track sticky band centered on every battle date.
+const SNAP_FRACTION = 0.015;
 
 // YYYY-MM-DD parses as UTC midnight; keep everything in UTC so positions and
 // labels don't drift by a day across timezones.
@@ -35,6 +43,19 @@ function TimelineSlider({ startDate, endDate, currentDate, onChange, battles }: 
     .map((b) => ({ id: b.id, name: b.name as string, ms: toMs(b.date as string) }))
     .filter((t) => t.ms >= startMs && t.ms <= endMs)
     .map((t) => ({ ...t, pct: ((t.ms - startMs) / span) * 100, active: t.ms <= currentMs }));
+
+  // Magnetic snap (G6c): if the dragged value lands within the snap window of a
+  // battle date, lock onto that exact date; otherwise move freely.
+  const snapWindow = span * SNAP_FRACTION;
+  const snapToBattle = (rawMs: number): number => {
+    let best = rawMs;
+    let bestDist = snapWindow;
+    for (const t of ticks) {
+      const dist = Math.abs(rawMs - t.ms);
+      if (dist <= bestDist) { best = t.ms; bestDist = dist; }
+    }
+    return best;
+  };
 
   return (
     <div className="mt-4">
@@ -64,7 +85,7 @@ function TimelineSlider({ startDate, endDate, currentDate, onChange, battles }: 
         max={endMs}
         step={DAY_MS}
         value={currentMs}
-        onChange={(e) => onChange(toISODate(Number(e.target.value)))}
+        onChange={(e) => onChange(toISODate(snapToBattle(Number(e.target.value))))}
         aria-label="Timeline date"
         className="w-full accent-accent cursor-pointer"
       />
