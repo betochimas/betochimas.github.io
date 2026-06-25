@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Footer from '../components/Footer';
 import FileUpload from '../components/satorl/FileUpload.tsx';
+import StatsPanel from '../components/satorl/StatsPanel.tsx';
+import Scatter2D from '../components/satorl/Scatter2D.tsx';
 import type { ParsedDataset } from '../components/satorl/dataset.ts';
+
+// Nested-lazy: three.js downloads only when the 3D tab is opened.
+const Scatter3D = lazy(() => import('../components/satorl/Scatter3D.tsx'));
 
 const chip = 'inline-block px-2 py-0.5 text-xs font-semibold bg-accent/10 text-accent border border-accent/30 rounded';
 const chipMuted = 'inline-block px-2 py-0.5 text-xs font-medium border border-muted dark:border-white/20 rounded text-ink/70 dark:text-ink-dark/70';
 const label = 'text-xs uppercase tracking-wide text-ink/50 dark:text-ink-dark/50 mb-1';
+
+type View = 'stats' | '2d' | '3d';
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'stats', label: 'Stats' },
+  { id: '2d', label: '2D scatter' },
+  { id: '3d', label: '3D scatter' },
+];
 
 function sidecarCaption(meta: NonNullable<ParsedDataset['meta']>): string {
   const parts: string[] = [];
@@ -26,14 +38,12 @@ function ParsedSummary({ dataset }: { dataset: ParsedDataset }) {
           {rowCount.toLocaleString()} rows × {numericColumns.length + nonNumericColumns.length} columns
         </span>
       </div>
-
       <div>
         <p className={label}>Numeric ({numericColumns.length})</p>
         <div className="flex flex-wrap gap-1.5">
           {numericColumns.map((c) => <span key={c} className={chip}>{c}</span>)}
         </div>
       </div>
-
       {nonNumericColumns.length > 0 && (
         <div>
           <p className={label}>Non-numeric ({nonNumericColumns.length}) — excluded from plot axes</p>
@@ -42,10 +52,8 @@ function ParsedSummary({ dataset }: { dataset: ParsedDataset }) {
           </div>
         </div>
       )}
-
       <p className="text-sm text-ink/70 dark:text-ink-dark/70">
         {meta ? `Sidecar: ${sidecarCaption(meta)}.` : 'No sidecar — columns inferred from the CSV header.'}
-        {' '}Charts arrive in the next slice.
       </p>
     </div>
   );
@@ -54,6 +62,7 @@ function ParsedSummary({ dataset }: { dataset: ParsedDataset }) {
 export default function Satorl() {
   const [dataset, setDataset] = useState<ParsedDataset | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>('stats');
 
   return (
     <>
@@ -67,13 +76,45 @@ export default function Satorl() {
 
         <div className="mt-6">
           <FileUpload
-            onData={(d) => { setDataset(d); setError(null); }}
+            onData={(d) => { setDataset(d); setError(null); setView('stats'); }}
             onError={(m) => { setError(m); setDataset(null); }}
           />
         </div>
 
         {error && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
-        {dataset && <ParsedSummary dataset={dataset} />}
+
+        {dataset && (
+          <>
+            <ParsedSummary dataset={dataset} />
+
+            <div className="mt-6 flex gap-1.5">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => setView(v.id)}
+                  className={`px-3 py-1 text-sm font-semibold rounded-md border transition-colors ${
+                    view === v.id
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-muted dark:border-white/20 text-ink/70 dark:text-ink-dark/70 hover:border-accent'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4">
+              {view === 'stats' && <StatsPanel dataset={dataset} />}
+              {view === '2d' && <Scatter2D dataset={dataset} />}
+              {view === '3d' && (
+                <Suspense fallback={<p className="text-sm italic">Loading 3D view…</p>}>
+                  <Scatter3D dataset={dataset} />
+                </Suspense>
+              )}
+            </div>
+          </>
+        )}
       </main>
       <Footer />
     </>
