@@ -12,7 +12,7 @@ const navItems: NavItem[] = [
   { label: 'Blog' },
   { label: 'Poli Viz', to: '/poliviz' },
   { label: 'Conflicts', to: '/conflicts' },
-  { label: 'Satori' },
+  { label: 'Satorl', to: '/satorl' },
   { label: 'MLOps?' },
 ];
 
