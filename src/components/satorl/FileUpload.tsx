@@ -29,7 +29,7 @@ async function readSidecar(file: File): Promise<SatorlSidecar | null> {
 }
 
 function buildDataset(
-  fileName: string,
+  file: File,
   columns: string[],
   rows: Record<string, unknown>[],
   meta: SatorlSidecar | null,
@@ -55,7 +55,7 @@ function buildDataset(
     return 'No numeric columns found — the visualizer needs at least one numeric column to plot.';
   }
   const nonNumericColumns = columns.filter((c) => !numericColumns.includes(c));
-  return { fileName, columns, numericColumns, nonNumericColumns, rowCount: rows.length, numericData, meta };
+  return { fileName: file.name, file, columns, numericColumns, nonNumericColumns, rowCount: rows.length, numericData, meta };
 }
 
 export default function FileUpload({ onData, onError }: FileUploadProps) {
@@ -80,7 +80,7 @@ export default function FileUpload({ onData, onError }: FileUploadProps) {
       skipEmptyLines: true,
       complete: (result) => {
         setBusy(false);
-        const built = buildDataset(csv.name, result.meta.fields ?? [], result.data, meta);
+        const built = buildDataset(csv, result.meta.fields ?? [], result.data, meta);
         if (typeof built === 'string') onError(built);
         else onData(built);
       },

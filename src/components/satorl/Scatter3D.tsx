@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { ParsedDataset } from './dataset.ts';
-import { rankByVariance } from './analysis.ts';
 import { useDarkMode } from './useDarkMode.ts';
 import AxisPicker from './AxisPicker.tsx';
 
@@ -18,18 +17,17 @@ function normalize(values: number[]): number[] {
   return values.map((v) => (!Number.isFinite(v) || span === 0 ? 0 : ((v - lo) / span) * 2 - 1));
 }
 
-export default function Scatter3D({ dataset }: { dataset: ParsedDataset }) {
-  const ranked = useMemo(
-    () => rankByVariance(dataset.numericColumns, dataset.numericData),
-    [dataset],
-  );
-  const [xCol, setXCol] = useState(ranked[0]);
-  const [yCol, setYCol] = useState(ranked[1] ?? ranked[0]);
-  const [zCol, setZCol] = useState(ranked[2] ?? ranked[0]);
-  useEffect(() => {
-    setXCol(ranked[0]); setYCol(ranked[1] ?? ranked[0]); setZCol(ranked[2] ?? ranked[0]);
-  }, [ranked]);
+interface Scatter3DProps {
+  dataset: ParsedDataset;
+  xCol: string;
+  yCol: string;
+  zCol: string;
+  onXChange?: (c: string) => void; // omit → axis label is static (projection view)
+  onYChange?: (c: string) => void;
+  onZChange?: (c: string) => void;
+}
 
+export default function Scatter3D({ dataset, xCol, yCol, zCol, onXChange, onYChange, onZChange }: Scatter3DProps) {
   const dark = useDarkMode();
   const mountRef = useRef<HTMLDivElement>(null);
   const pointsRef = useRef<THREE.Points | null>(null);
@@ -106,9 +104,15 @@ export default function Scatter3D({ dataset }: { dataset: ParsedDataset }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3 text-sm">
-        <AxisPicker label="X" value={xCol} options={dataset.numericColumns} onChange={setXCol} />
-        <AxisPicker label="Y" value={yCol} options={dataset.numericColumns} onChange={setYCol} />
-        <AxisPicker label="Z" value={zCol} options={dataset.numericColumns} onChange={setZCol} />
+        {onXChange
+          ? <AxisPicker label="X" value={xCol} options={dataset.numericColumns} onChange={onXChange} />
+          : <span className="text-ink/60 dark:text-ink-dark/60">X: <span className="font-medium">{xCol}</span></span>}
+        {onYChange
+          ? <AxisPicker label="Y" value={yCol} options={dataset.numericColumns} onChange={onYChange} />
+          : <span className="text-ink/60 dark:text-ink-dark/60">Y: <span className="font-medium">{yCol}</span></span>}
+        {onZChange
+          ? <AxisPicker label="Z" value={zCol} options={dataset.numericColumns} onChange={onZChange} />
+          : <span className="text-ink/60 dark:text-ink-dark/60">Z: <span className="font-medium">{zCol}</span></span>}
       </div>
       <div
         ref={mountRef}

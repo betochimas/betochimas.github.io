@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { extent } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import type { ParsedDataset } from './dataset.ts';
-import { rankByVariance } from './analysis.ts';
 import { useDarkMode } from './useDarkMode.ts';
 import AxisPicker from './AxisPicker.tsx';
 
@@ -10,15 +9,15 @@ const WIDTH = 640;
 const HEIGHT = 440;
 const M = { top: 12, right: 16, bottom: 40, left: 52 };
 
-export default function Scatter2D({ dataset }: { dataset: ParsedDataset }) {
-  const ranked = useMemo(
-    () => rankByVariance(dataset.numericColumns, dataset.numericData),
-    [dataset],
-  );
-  const [xCol, setXCol] = useState(ranked[0]);
-  const [yCol, setYCol] = useState(ranked[1] ?? ranked[0]);
-  useEffect(() => { setXCol(ranked[0]); setYCol(ranked[1] ?? ranked[0]); }, [ranked]);
+interface Scatter2DProps {
+  dataset: ParsedDataset;
+  xCol: string;
+  yCol: string;
+  onXChange?: (c: string) => void; // omit → axis label is static (projection view)
+  onYChange?: (c: string) => void;
+}
 
+export default function Scatter2D({ dataset, xCol, yCol, onXChange, onYChange }: Scatter2DProps) {
   const dark = useDarkMode();
   const innerW = WIDTH - M.left - M.right;
   const innerH = HEIGHT - M.top - M.bottom;
@@ -62,8 +61,12 @@ export default function Scatter2D({ dataset }: { dataset: ParsedDataset }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-3 text-sm">
-        <AxisPicker label="X" value={xCol} options={dataset.numericColumns} onChange={setXCol} />
-        <AxisPicker label="Y" value={yCol} options={dataset.numericColumns} onChange={setYCol} />
+        {onXChange
+          ? <AxisPicker label="X" value={xCol} options={dataset.numericColumns} onChange={onXChange} />
+          : <span className="text-ink/60 dark:text-ink-dark/60">X: <span className="font-medium">{xCol}</span></span>}
+        {onYChange
+          ? <AxisPicker label="Y" value={yCol} options={dataset.numericColumns} onChange={onYChange} />
+          : <span className="text-ink/60 dark:text-ink-dark/60">Y: <span className="font-medium">{yCol}</span></span>}
       </div>
       <div className="overflow-x-auto">
         <div className="relative border border-muted dark:border-white/15 rounded-md" style={{ width: WIDTH, height: HEIGHT }}>
