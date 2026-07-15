@@ -1,8 +1,8 @@
 import { useState } from 'react'
 {/* All components exclusive to PoliViz page
 import USMap from "../data/USMap.jsx";*/}
-import USMapResults from '../components/USMapResults.tsx';
-import PolvizIntro from '../components/PolivizIntro.tsx';
+import USMapResults from '../components/poliviz/USMapResults.tsx';
+import PolvizIntro from '../components/poliviz/PolivizIntro.tsx';
 import Footer from '../components/Footer.jsx';
 
 function PoliViz() {

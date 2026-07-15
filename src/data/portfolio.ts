@@ -5,7 +5,7 @@
 export interface Project {
   title: string;
   description: string;
-  imgUrl: string;
+  imgUrl?: string;
   stack: string[];
   /** Omit when there's no public link yet — the row renders a muted placeholder. */
   link?: string;
@@ -14,30 +14,32 @@ export interface Project {
 
 const portfolio: Project[] = [
   {
-    title: 'ASR Model for Dysarthric Speech',
-    description:
-      'Fine-tuned a self-supervised XLSR speech model to transcribe dysarthric speech, improving recognition accuracy for speakers with motor-speech impairments.',
-    imgUrl: '/assets/react.svg',
-    stack: ['Python', 'PyTorch', 'XLSR'],
-    buttonLabel: 'View Project',
-  },
-  {
     title: 'Historical Conflicts API',
     description:
-      'A Spring Boot REST API backed by Postgres, cataloging historical conflicts, nations, and battles — and powering the live demo on this site.',
-    imgUrl: '/assets/react.svg',
-    stack: ['Java', 'Spring Boot', 'PostgreSQL'],
+      'A Java/Spring Boot REST API modeling nations, conflicts, and battles, with JWT auth, Redis caching, ' +
+      'and ~180 Testcontainers integration tests. Backed by Neon Postgres on Cloud Run, with a live map and ' +
+      'timeline demo on this site.',
+    stack: ['Java 21', 'Spring Boot', 'PostgreSQL', 'Redis', 'JWT', 'Docker'],
     link: 'https://github.com/betochimas/historical-conflicts-api',
     buttonLabel: 'View Repo',
   },
   {
-    title: 'Toy LLM Project (WIP)',
+    title: 'Satorl',
     description:
-      'A transformer language model built from scratch to internalize the mechanics of attention, tokenization, and the training loop.',
-    imgUrl: '/assets/react.svg',
-    stack: ['PyTorch', 'HuggingFace'],
-    link: 'https://github.com/betochimas',
-    buttonLabel: 'View Code',
+      'A Python CLI that generates realistic synthetic datasets, paired with a browser-based analyzer for ' +
+      'exploring any CSV with summary stats, correlation heatmaps, and interactive 2D/3D scatter plots with ' +
+      'PCA and UMAP/t-SNE. Try the live analyzer here!',
+    stack: ['Python', 'Typer', 'FastAPI', 'Three.js'],
+    link: 'https://github.com/betochimas/satorl',
+    buttonLabel: 'View Repo',
+  },
+  {
+    title: 'RAG Usage Analyzer (WIP)',
+    description:
+      'An end-to-end RAG pipeline that ingests past AI-assistant conversations and lets you query your own ' +
+      'usage (topics, repeated questions, and prompt efficiency), with an eval harness for retrieval quality. ',
+    stack: ['Python', 'FastAPI', 'Next.js', 'Claude API'],
+    buttonLabel: 'View Project',
   },
 ];
 

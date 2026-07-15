@@ -156,8 +156,8 @@ export default function Satorl() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <>
-      <main className="max-w-5xl mx-auto px-6 py-10 min-h-[60vh]">
+    <div className="min-h-screen flex flex-col">
+      <main className="max-w-5xl mx-auto px-6 py-10 flex-1 w-full">
         <h1 className="text-2xl font-bold tracking-tight">satorl visualizer</h1>
         <p className="mt-2 text-sm text-ink/70 dark:text-ink-dark/70 max-w-2xl">
           Upload a satorl-generated CSV to explore the distribution of its points — per-dimension
@@ -177,6 +177,6 @@ export default function Satorl() {
         {dataset && <Workspace key={dataset.fileName} dataset={dataset} />}
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

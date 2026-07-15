@@ -8,16 +8,16 @@ export interface Interest {
 
 const interests: Interest[] = [
   {
-    label: 'My Interest #1',
-    body: 'Placeholder body text expanding on the main point. Replace with a real interest and a sentence or two of detail.',
+    label: 'Machine Learning',
+    body: 'Machine learning attempts to mimic how we learn, and at its core, it is essentially many, many arithmetic calculations. New models have gotten better by how we use different learning blocks and learning functions, and that is amazing in my eyes.',
   },
   {
-    label: 'My Interest #2',
-    body: 'Placeholder body text — add a takeaway, a quote, or a short anecdote here during the content pass.',
+    label: 'High-Performance Computing',
+    body: 'A key part in how we got from ML to LLMs to modern AI tools is by making many simple calculations faster. So it continues to be an important problem to tackle and it is truly great to learn about how computing has been accelerated in many different ways.',
   },
   {
-    label: 'My Interest #3',
-    body: 'Placeholder body text providing details, explanations, and context for this interest.',
+    label: 'Computer Architecture',
+    body: 'This is more general but it ties into the previous two topics by having to consider what you can fit into a limited space for the purposes of gaming, data scientists, professional organizations, etc.',
   },
 ];
 

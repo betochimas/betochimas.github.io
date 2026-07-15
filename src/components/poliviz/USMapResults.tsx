@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
-//import state_colors from "../data/state_colors"; // import state colors
-import state_colors_t from "../data/state_colors.ts"; // import state colors
+//import state_colors from "../../data/state_colors"; // import state colors
+import state_colors_t from "../../data/state_colors.ts"; // import state colors
 
 interface USMapResultsProps {
   currentMode: string;
